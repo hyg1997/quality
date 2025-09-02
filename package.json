@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
+    "@libsql/client": "^0.15.14",
+    "@prisma/adapter-libsql": "^6.15.0",
     "@prisma/client": "^6.15.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/qrcode": "^1.5.5",
@@ -37,6 +39,7 @@
     "@types/speakeasy": "^2.0.10",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
+    "ignore-loader": "^0.1.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

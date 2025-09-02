@@ -59,14 +59,14 @@ export const authOptions: NextAuthOptions = {
                     include: {
                       rolePermissions: {
                         include: {
-                          permission: true
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+                          permission: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           });
 
           if (!user || !user.password) {
@@ -83,27 +83,63 @@ export const authOptions: NextAuthOptions = {
           }
 
           // Extract roles and permissions from database
-          const userRoles = user.userRoles.map(ur => ({
-            id: ur.role.id,
-            name: ur.role.name,
-            displayName: ur.role.displayName,
-            level: ur.role.level
-          }));
+          const userRoles = user.userRoles.map(
+            (ur: {
+              role: {
+                id: string;
+                name: string;
+                displayName: string;
+                level: number;
+              };
+            }) => ({
+              id: ur.role.id,
+              name: ur.role.name,
+              displayName: ur.role.displayName,
+              level: ur.role.level,
+            })
+          );
 
           // Flatten permissions from all roles and remove duplicates
-          const allPermissions = user.userRoles.flatMap(ur => 
-            ur.role.rolePermissions.map(rp => ({
-              id: rp.permission.id,
-              name: rp.permission.name,
-              displayName: rp.permission.displayName,
-              resource: rp.permission.resource,
-              action: rp.permission.action
-            }))
+          const allPermissions = user.userRoles.flatMap(
+            (ur: {
+              role: {
+                rolePermissions: Array<{
+                  permission: {
+                    id: string;
+                    name: string;
+                    displayName: string;
+                    resource: string;
+                    action: string;
+                  };
+                }>;
+              };
+            }) =>
+              ur.role.rolePermissions.map(
+                (rp: {
+                  permission: {
+                    id: string;
+                    name: string;
+                    displayName: string;
+                    resource: string;
+                    action: string;
+                  };
+                }) => ({
+                  id: rp.permission.id,
+                  name: rp.permission.name,
+                  displayName: rp.permission.displayName,
+                  resource: rp.permission.resource,
+                  action: rp.permission.action,
+                })
+              )
           );
 
           // Remove duplicate permissions
-          const uniquePermissions = allPermissions.filter((permission, index, self) => 
-            index === self.findIndex(p => p.name === permission.name)
+          const uniquePermissions = allPermissions.filter(
+            (
+              permission: { name: string },
+              index: number,
+              self: Array<{ name: string }>
+            ) => index === self.findIndex((p) => p.name === permission.name)
           );
 
           const authUser: AuthUser = {
