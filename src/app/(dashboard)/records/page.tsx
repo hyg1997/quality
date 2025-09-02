@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Plus, Edit, Trash2, ClipboardList, Check, X, Eye } from "lucide-react";
+import { Trash2, ClipboardList, FileText } from "lucide-react";
 import {
   DataTable,
   FormModal,
@@ -17,6 +17,7 @@ import { useForm } from "@/hooks/useForm";
 import { useNotifications } from "@/hooks/useNotifications";
 import { recordService, type ProductRecord } from "@/services/api/records";
 import { productService, type Product } from "@/services/api/products";
+import { controlService } from "@/services/api/controls";
 
 interface RecordFormData extends Record<string, unknown> {
   productId: string;
@@ -156,7 +157,7 @@ export default function RecordsManagement() {
       if (!recordService.canDeleteRecord(record)) {
         error(
           "No se puede eliminar",
-          "Solo se pueden eliminar registros pendientes"
+          `Solo se pueden eliminar registros pendientes. Estado actual: ${record.status}`
         );
         return;
       }
@@ -179,13 +180,16 @@ export default function RecordsManagement() {
             } else {
               error(
                 "Error al eliminar registro",
-                response.error || "No se pudo eliminar el registro"
+                response.error ||
+                  "No se pudo eliminar el registro. Verifica tus permisos."
               );
             }
-          } catch {
+          } catch (err) {
+            const errorMessage =
+              err instanceof Error ? err.message : "Error desconocido";
             error(
               "Error al eliminar registro",
-              "Ha ocurrido un error inesperado"
+              `Ha ocurrido un error inesperado: ${errorMessage}`
             );
           }
         },
@@ -194,90 +198,281 @@ export default function RecordsManagement() {
     [confirmModal, fetchRecords, success, error]
   );
 
-  const handleApproveRecord = useCallback(
+  const handleGeneratePDF = useCallback(
     async (record: ProductRecord) => {
-      if (!recordService.canApproveRecord(record)) {
-        error(
-          "No se puede aprobar",
-          "Solo se pueden aprobar registros pendientes"
+      try {
+        // Get complete record data with controls and photos
+        const response = await controlService.getQualityControl(record.id);
+
+        if (!response.success || !response.data) {
+          error(
+            "Error al obtener datos",
+            "No se pudieron obtener los datos del registro"
+          );
+          return;
+        }
+
+        const { record: recordData, controls, photos } = response.data;
+
+        // Generate PDF using jsPDF
+        const jsPDF = (await import("jspdf")).default;
+        const doc = new jsPDF();
+
+        // Title
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.text("Registro de Producto", 105, 15, { align: "center" });
+        doc.line(10, 20, 200, 20);
+
+        // Basic information
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        let currentY = 30;
+
+        doc.text(
+          `Fecha y Hora: ${new Date(
+            recordData.registrationDate
+          ).toLocaleString()}`,
+          10,
+          currentY
         );
-        return;
-      }
-
-      confirmModal.confirm({
-        title: "Aprobar Registro",
-        message: `¿Estás seguro de que quieres aprobar el registro "${record.internalLot}"?`,
-        type: "success",
-        confirmText: "Aprobar",
-        onConfirm: async () => {
-          try {
-            const response = await recordService.approveRecord(record.id);
-
-            if (response.success) {
-              await fetchRecords();
-              success(
-                "Registro aprobado",
-                `El registro ${record.internalLot} ha sido aprobado exitosamente`
-              );
-            } else {
-              error(
-                "Error al aprobar registro",
-                response.error || "No se pudo aprobar el registro"
-              );
-            }
-          } catch {
-            error(
-              "Error al aprobar registro",
-              "Ha ocurrido un error inesperado"
-            );
-          }
-        },
-      });
-    },
-    [confirmModal, fetchRecords, success, error]
-  );
-
-  const handleRejectRecord = useCallback(
-    async (record: ProductRecord) => {
-      if (!recordService.canRejectRecord(record)) {
-        error(
-          "No se puede rechazar",
-          "Solo se pueden rechazar registros pendientes"
+        currentY += 10;
+        doc.text(`Lote Interno: ${recordData.internalLot}`, 10, currentY);
+        currentY += 10;
+        doc.text(`Guía: ${recordData.supplierLot || "N/A"}`, 10, currentY);
+        currentY += 10;
+        doc.text(`Cantidad: ${recordData.quantity}`, 10, currentY);
+        currentY += 10;
+        doc.text(
+          `Producto: ${recordData.product?.name || "N/A"}`,
+          10,
+          currentY
         );
-        return;
-      }
+        currentY += 10;
+        doc.text(`Verificado por: Administrador`, 10, currentY);
+        currentY += 10;
 
-      confirmModal.confirm({
-        title: "Rechazar Registro",
-        message: `¿Estás seguro de que quieres rechazar el registro "${record.internalLot}"?`,
-        type: "danger",
-        confirmText: "Rechazar",
-        onConfirm: async () => {
-          try {
-            const response = await recordService.rejectRecord(record.id);
+        if (recordData.observations) {
+          doc.text(
+            `Observaciones Generales: ${recordData.observations}`,
+            10,
+            currentY
+          );
+          currentY += 10;
+        }
 
-            if (response.success) {
-              await fetchRecords();
-              success(
-                "Registro rechazado",
-                `El registro ${record.internalLot} ha sido rechazado`
-              );
-            } else {
-              error(
-                "Error al rechazar registro",
-                response.error || "No se pudo rechazar el registro"
-              );
+        // Quality control section
+        currentY += 10;
+        doc.line(10, currentY, 200, currentY);
+        currentY += 10;
+        doc.setFont("helvetica", "bold");
+        doc.text("Control de Calidad", 10, currentY);
+        doc.setFont("helvetica", "normal");
+        currentY += 15;
+
+        const alertas: string[] = [];
+
+        if (controls && controls.length > 0) {
+          // Table headers with borders
+          doc.setFillColor(200, 200, 200);
+          doc.rect(10, currentY, 190, 12, "F");
+          doc.rect(10, currentY, 190, 12, "S");
+
+          // Column borders
+          doc.line(10, currentY, 10, currentY + 12); // Left border
+          doc.line(60, currentY, 60, currentY + 12); // After Parámetro
+          doc.line(120, currentY, 120, currentY + 12); // After Rango
+          doc.line(150, currentY, 150, currentY + 12); // After Control
+          doc.line(200, currentY, 200, currentY + 12); // Right border
+
+          doc.setFont("helvetica", "bold");
+          doc.text("Parámetro", 12, currentY + 8);
+          doc.text("Rango/Especificación", 62, currentY + 8);
+          doc.text("Control", 122, currentY + 8);
+          doc.text("Observaciones", 152, currentY + 8);
+          doc.setFont("helvetica", "normal");
+          currentY += 12;
+
+          // Controls data with borders
+          for (const control of controls) {
+            if (currentY > 250) {
+              doc.addPage();
+              currentY = 20;
             }
-          } catch {
-            error(
-              "Error al rechazar registro",
-              "Ha ocurrido un error inesperado"
+
+            const parametro = control.parameterName || "";
+            const especificacion = control.fullRange || "";
+            const controlValue =
+              control.textControl || control.controlValue?.toString() || "";
+            const observacion = control.observation || "";
+            const fueraDeRango = control.outOfRange;
+
+            if (fueraDeRango && control.alertMessage) {
+              alertas.push(`${parametro}: ${control.alertMessage}`);
+            }
+
+            // Text content with proper wrapping
+            const wrappedParametro = doc.splitTextToSize(parametro, 48);
+            const wrappedEspecificacion = doc.splitTextToSize(
+              especificacion,
+              58
             );
+            const wrappedControlValue = doc.splitTextToSize(controlValue, 28);
+            const wrappedObservacion = doc.splitTextToSize(observacion, 48);
+
+            // Calculate row height based on the tallest wrapped text
+            const maxLines = Math.max(
+              Array.isArray(wrappedParametro) ? wrappedParametro.length : 1,
+              Array.isArray(wrappedEspecificacion)
+                ? wrappedEspecificacion.length
+                : 1,
+              Array.isArray(wrappedControlValue)
+                ? wrappedControlValue.length
+                : 1,
+              Array.isArray(wrappedObservacion) ? wrappedObservacion.length : 1
+            );
+
+            const lineHeight = 5;
+            const rowHeight = Math.max(10, maxLines * lineHeight + 4); // Minimum 10, or calculated height
+
+            // Check if we need a new page with the calculated height
+            if (currentY + rowHeight > 280) {
+              doc.addPage();
+              currentY = 20;
+            }
+
+            // Draw cell borders with calculated height
+            doc.rect(10, currentY, 190, rowHeight, "S");
+            doc.line(60, currentY, 60, currentY + rowHeight);
+            doc.line(120, currentY, 120, currentY + rowHeight);
+            doc.line(150, currentY, 150, currentY + rowHeight);
+
+            // Draw text with proper vertical centering
+            const textStartY = currentY + 4;
+
+            doc.text(wrappedParametro, 12, textStartY);
+            doc.text(wrappedEspecificacion, 62, textStartY);
+
+            // Control value with color if out of range
+            if (fueraDeRango) {
+              doc.setTextColor(255, 0, 0);
+              doc.text(wrappedControlValue, 122, textStartY);
+              doc.setTextColor(0, 0, 0);
+            } else {
+              doc.text(wrappedControlValue, 122, textStartY);
+            }
+
+            doc.text(wrappedObservacion, 152, textStartY);
+            currentY += rowHeight;
           }
-        },
-      });
+        } else {
+          doc.text(
+            "No hay datos de control de calidad disponibles.",
+            10,
+            currentY
+          );
+          currentY += 10;
+        }
+
+        // Alerts section
+        if (alertas.length > 0) {
+          currentY += 10;
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(255, 0, 0);
+          doc.text("ALERTAS - VALORES FUERA DE RANGO:", 10, currentY);
+          doc.setFont("helvetica", "normal");
+          currentY += 10;
+
+          alertas.forEach((alerta: string) => {
+            doc.text(`• ${alerta}`, 15, currentY);
+            currentY += 8;
+          });
+          doc.setTextColor(0, 0, 0);
+        }
+
+        // Photos section
+        currentY += 10;
+        if (currentY > 250) {
+          doc.addPage();
+          currentY = 20;
+        }
+
+        if (photos && photos.length > 0) {
+          doc.text("Evidencia Fotográfica", 10, currentY);
+          currentY += 10;
+
+          for (const photo of photos) {
+            try {
+              const base64Image = `data:image/jpeg;base64,${photo.base64Data}`;
+              const img = new Image();
+
+              await new Promise<void>((resolve, reject) => {
+                img.onload = () => {
+                  const maxWidth = 140;
+                  const maxHeight = 120;
+                  let { width, height } = img;
+
+                  if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                  }
+                  if (height > maxHeight) {
+                    width = (width * maxHeight) / height;
+                    height = maxHeight;
+                  }
+
+                  if (currentY + height > 280) {
+                    doc.addPage();
+                    currentY = 20;
+                  }
+
+                  doc.addImage(
+                    base64Image,
+                    "JPEG",
+                    10,
+                    currentY,
+                    width,
+                    height
+                  );
+                  currentY += height + 10;
+                  resolve();
+                };
+                img.onerror = () => reject(new Error("Failed to load image"));
+                img.crossOrigin = "anonymous";
+                img.src = base64Image;
+              });
+            } catch (err) {
+              console.error("Error adding image to PDF:", err);
+              doc.text(
+                `Error cargando imagen: ${photo.filename}`,
+                10,
+                currentY
+              );
+              currentY += 10;
+            }
+          }
+        } else {
+          doc.text("No se adjuntaron imágenes.", 10, currentY);
+        }
+
+        // Save PDF
+        const filename = `${recordData.product?.name || "Registro"}_${new Date(
+          recordData.registrationDate
+        )
+          .toLocaleDateString()
+          .replace(/\//g, "-")}.pdf`;
+        doc.save(filename);
+
+        success(
+          "PDF generado",
+          "El PDF se ha generado y descargado exitosamente"
+        );
+      } catch (err) {
+        console.error("Error generating PDF:", err);
+        error("Error al generar PDF", "No se pudo generar el PDF del registro");
+      }
     },
-    [confirmModal, fetchRecords, success, error]
+    [success, error]
   );
 
   // Memoize columns definition to prevent recreation on every render
@@ -323,26 +518,6 @@ export default function RecordsManagement() {
         ),
       },
       {
-        key: "expirationDate",
-        header: "Fecha Vencimiento",
-        cell: (record) => (
-          <div className="text-sm text-gray-500">
-            {record.expirationDate
-              ? new Date(record.expirationDate).toLocaleDateString()
-              : "-"}
-          </div>
-        ),
-      },
-      {
-        key: "status",
-        header: "Estado",
-        cell: (record) => (
-          <Badge className={recordService.getStatusColor(record.status)}>
-            {recordService.getStatusLabel(record.status)}
-          </Badge>
-        ),
-      },
-      {
         key: "createdAt",
         header: "Creado",
         cell: (record) => (
@@ -359,52 +534,20 @@ export default function RecordsManagement() {
   const actions: ActionDef<ProductRecord>[] = useMemo(
     () => [
       {
-        label: "Ver",
-        onClick: (record) => viewModal.open(record),
-        icon: <Eye className="h-4 w-4" />,
+        label: "Ver PDF",
+        onClick: handleGeneratePDF,
+        icon: <FileText className="h-4 w-4" />,
         variant: "secondary",
-      },
-      {
-        label: "Editar",
-        onClick: (record) => editModal.open(record),
-        icon: <Edit className="h-4 w-4" />,
-        variant: "secondary",
-        disabled: (record) => !recordService.canEditRecord(record),
-        hidden: () => !hasPermission("records:update"),
-      },
-      {
-        label: "Aprobar",
-        onClick: handleApproveRecord,
-        icon: <Check className="h-4 w-4" />,
-        variant: "secondary",
-        disabled: (record) => !recordService.canApproveRecord(record),
-        hidden: () => !hasPermission("records:approve"),
-      },
-      {
-        label: "Rechazar",
-        onClick: handleRejectRecord,
-        icon: <X className="h-4 w-4" />,
-        variant: "danger",
-        disabled: (record) => !recordService.canRejectRecord(record),
-        hidden: () => !hasPermission("records:approve"),
       },
       {
         label: "Eliminar",
         onClick: handleDeleteRecord,
         icon: <Trash2 className="h-4 w-4" />,
         variant: "danger",
-        disabled: (record) => !recordService.canDeleteRecord(record),
         hidden: () => !hasPermission("records:delete"),
       },
     ],
-    [
-      editModal,
-      viewModal,
-      handleApproveRecord,
-      handleRejectRecord,
-      handleDeleteRecord,
-      hasPermission,
-    ]
+    [handleDeleteRecord, handleGeneratePDF, hasPermission]
   );
 
   if (status === "loading") {
@@ -436,24 +579,11 @@ export default function RecordsManagement() {
 
   return (
     <>
-      <PageLayout
-        title="Gestión de Registros de Productos"
-        actions={
-          hasPermission("records:create") ? (
-            <button
-              onClick={() => createModal.open()}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Crear Registro
-            </button>
-          ) : undefined
-        }
-      >
+      <PageLayout title="Gestión de Registros de Productos">
         <DataTable
-          data={records as unknown as Record<string, unknown>[]}
-          columns={columns as unknown as ColumnDef<Record<string, unknown>>[]}
-          actions={actions as unknown as ActionDef<Record<string, unknown>>[]}
+          data={records}
+          columns={columns}
+          actions={actions}
           loading={loading}
           emptyMessage="No hay registros configurados"
         />

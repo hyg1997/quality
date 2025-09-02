@@ -13,6 +13,8 @@ import {
   Settings,
   Sliders,
   LogOut,
+  Menu,
+  ChevronLeft,
 } from "lucide-react";
 
 interface MenuItem {
@@ -55,6 +57,12 @@ const menuItems: MenuItem[] = [
     permission: PERMISSIONS.RECORDS?.READ || PERMISSIONS.CONTENT.READ,
   },
   {
+    name: "Control de Calidad",
+    href: "/quality-control",
+    icon: ClipboardList,
+    permission: PERMISSIONS.CONTENT.CREATE,
+  },
+  {
     name: "Reportes",
     href: "/reports",
     icon: TrendingUp,
@@ -77,6 +85,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -133,16 +142,36 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 bg-white shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 ${
+          sidebarCollapsed ? "w-16" : "w-64"
+        } ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-center h-16 px-4 bg-blue-600">
-            <h1 className="text-xl font-bold text-white truncate">
-              Control de Calidad
-            </h1>
+          <div className="flex items-center justify-center h-16 px-4 bg-blue-600 relative">
+            {sidebarCollapsed ? (
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                <span className="text-blue-600 font-bold text-sm">CC</span>
+              </div>
+            ) : (
+              <h1 className="text-xl font-bold text-white truncate">
+                Control de Calidad
+              </h1>
+            )}
+            
+            {/* Toggle button - only visible on desktop */}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="hidden lg:flex absolute -right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 bg-blue-600 border-2 border-white rounded-full items-center justify-center hover:bg-blue-700 transition-colors"
+            >
+              <ChevronLeft 
+                className={`h-3 w-3 text-white transition-transform duration-300 ${
+                  sidebarCollapsed ? "rotate-180" : ""
+                }`} 
+              />
+            </button>
           </div>
 
           {/* Navigation */}
@@ -162,16 +191,30 @@ export default function DashboardLayout({
                 <button
                   key={item.href}
                   onClick={handleNavigation}
-                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  className={`w-full flex items-center text-sm font-medium rounded-lg transition-all duration-200 group relative ${
+                    sidebarCollapsed ? "px-2 py-3 justify-center" : "px-4 py-3"
+                  } ${
                     isActive
                       ? "bg-blue-100 text-blue-700 border-r-4 border-blue-700 shadow-sm"
                       : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:shadow-sm"
                   }`}
+                  title={sidebarCollapsed ? item.name : undefined}
                 >
-                  <item.icon className="mr-3 h-5 w-5" />
-                  <span className="truncate">{item.name}</span>
-                  {isActive && (
-                    <span className="ml-auto w-2 h-2 bg-blue-600 rounded-full"></span>
+                  <item.icon className={`h-5 w-5 flex-shrink-0 ${sidebarCollapsed ? "" : "mr-3"}`} />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="truncate">{item.name}</span>
+                      {isActive && (
+                        <span className="ml-auto w-2 h-2 bg-blue-600 rounded-full"></span>
+                      )}
+                    </>
+                  )}
+                  
+                  {/* Tooltip for collapsed state */}
+                  {sidebarCollapsed && (
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                      {item.name}
+                    </div>
                   )}
                 </button>
               );
@@ -180,46 +223,78 @@ export default function DashboardLayout({
 
           {/* User info */}
           <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+            {sidebarCollapsed ? (
+              <div className="flex flex-col items-center space-y-3">
+                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center group relative">
                   <span className="text-white font-medium text-sm">
                     {session.user.fullName?.charAt(0).toUpperCase()}
                   </span>
+                  {/* User tooltip */}
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                    {session.user.fullName}
+                  </div>
                 </div>
+                <button
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
+                  className="w-10 h-10 flex items-center justify-center text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed group relative"
+                  title="Cerrar Sesión"
+                >
+                  {isSigningOut ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                  ) : (
+                    <LogOut className="h-4 w-4" />
+                  )}
+                  {/* Logout tooltip */}
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                    Cerrar Sesión
+                  </div>
+                </button>
               </div>
-              <div className="ml-3 flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {session.user.fullName}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {session.user.email}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleSignOut}
-              disabled={isSigningOut}
-              className="mt-3 w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSigningOut ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-                  Cerrando...
-                </>
-              ) : (
-                <>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Cerrar Sesión
-                </>
-              )}
-            </button>
+            ) : (
+              <>
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                      <span className="text-white font-medium text-sm">
+                        {session.user.fullName?.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="ml-3 flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {session.user.fullName}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {session.user.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
+                  className="mt-3 w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSigningOut ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                      Cerrando...
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Cerrar Sesión
+                    </>
+                  )}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className={`transition-all duration-300 ${sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"}`}>
         {/* Top header */}
         <header className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
           <div className="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
@@ -230,19 +305,7 @@ export default function DashboardLayout({
                 onClick={() => setSidebarOpen(true)}
               >
                 <span className="sr-only">Abrir menú</span>
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
+                <Menu className="h-6 w-6" />
               </button>
               <div className="ml-4 lg:ml-0">
                 <h1 className="text-2xl font-semibold text-gray-900">

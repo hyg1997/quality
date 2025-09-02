@@ -222,7 +222,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || !hasPermission(session, PERMISSIONS.CONTENT?.DELETE)) {
+    if (!session || !hasPermission(session, PERMISSIONS.RECORDS?.DELETE || PERMISSIONS.CONTENT?.DELETE)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

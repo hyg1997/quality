@@ -258,7 +258,7 @@ export default function ProductsManagement() {
           hidden: () => !hasPermission("content:update"),
         },
         {
-          label: "",
+          label: "Visible",
           onClick: handleToggleStatus,
           icon: <Eye className="h-4 w-4" />,
           variant: "secondary" as const,

@@ -1,7 +1,7 @@
 import { apiClient, type ApiResponse } from "./base";
 
 // Types for Master Parameter API
-export interface MasterParameter {
+export interface MasterParameter extends Record<string, unknown> {
   id: string;
   name: string;
   description?: string;
@@ -50,9 +50,7 @@ export class MasterParameterService {
   /**
    * Get all master parameters with pagination and filters
    */
-  async getMasterParameters(
-    params?: MasterParametersQueryParams
-  ): Promise<
+  async getMasterParameters(params?: MasterParametersQueryParams): Promise<
     ApiResponse<{
       masterParameters: MasterParameter[];
       total: number;
@@ -120,7 +118,9 @@ export class MasterParameterService {
     id: string,
     active: boolean
   ): Promise<ApiResponse<MasterParameter>> {
-    return apiClient.put<MasterParameter>(`/api/master-parameters/${id}`, { active });
+    return apiClient.put<MasterParameter>(`/api/master-parameters/${id}`, {
+      active,
+    });
   }
 }
 

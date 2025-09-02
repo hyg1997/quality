@@ -10,3 +10,6 @@ export type { Role, Permission, CreateRoleData, UpdateRoleData, PermissionsRespo
 
 export { recordService, RecordService } from './records'
 export type { ProductRecord, CreateRecordData, UpdateRecordData, RecordsQueryParams } from './records'
+
+export { controlService, ControlService } from './controls'
+export type { Control, Photo, QualityControlRecord, CreateControlData, CreatePhotoData, ParameterForControl } from './controls'

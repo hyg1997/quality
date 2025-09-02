@@ -1,7 +1,7 @@
 import { apiClient, type ApiResponse } from "./base";
 
 // Types for Record API
-export interface ProductRecord {
+export interface ProductRecord extends Record<string, unknown> {
   id: string;
   productId: string;
   internalLot: string;
@@ -70,9 +70,7 @@ export class RecordService {
   /**
    * Get all records with pagination and filters
    */
-  async getRecords(
-    params?: RecordsQueryParams
-  ): Promise<
+  async getRecords(params?: RecordsQueryParams): Promise<
     ApiResponse<{
       records: ProductRecord[];
       total: number;
@@ -82,17 +80,17 @@ export class RecordService {
   > {
     const searchParams = new URLSearchParams();
 
-    if (params?.page) searchParams.set('page', params.page.toString());
-    if (params?.limit) searchParams.set('limit', params.limit.toString());
-    if (params?.search) searchParams.set('search', params.search);
-    if (params?.productId) searchParams.set('productId', params.productId);
-    if (params?.status) searchParams.set('status', params.status);
-    if (params?.userId) searchParams.set('userId', params.userId);
-    if (params?.startDate) searchParams.set('startDate', params.startDate);
-    if (params?.endDate) searchParams.set('endDate', params.endDate);
+    if (params?.page) searchParams.set("page", params.page.toString());
+    if (params?.limit) searchParams.set("limit", params.limit.toString());
+    if (params?.search) searchParams.set("search", params.search);
+    if (params?.productId) searchParams.set("productId", params.productId);
+    if (params?.status) searchParams.set("status", params.status);
+    if (params?.userId) searchParams.set("userId", params.userId);
+    if (params?.startDate) searchParams.set("startDate", params.startDate);
+    if (params?.endDate) searchParams.set("endDate", params.endDate);
 
     const queryString = searchParams.toString();
-    const url = `/api/records${queryString ? `?${queryString}` : ''}`;
+    const url = `/api/records${queryString ? `?${queryString}` : ""}`;
 
     return apiClient.get<{
       records: ProductRecord[];
@@ -107,8 +105,20 @@ export class RecordService {
    */
   async getRecordsByProduct(
     productId: string
-  ): Promise<ApiResponse<{ records: ProductRecord[], total: number, page: number, limit: number }>> {
-    return apiClient.get<{ records: ProductRecord[], total: number, page: number, limit: number }>(`/api/records?productId=${productId}&limit=1000`);
+  ): Promise<
+    ApiResponse<{
+      records: ProductRecord[];
+      total: number;
+      page: number;
+      limit: number;
+    }>
+  > {
+    return apiClient.get<{
+      records: ProductRecord[];
+      total: number;
+      page: number;
+      limit: number;
+    }>(`/api/records?productId=${productId}&limit=1000`);
   }
 
   /**
@@ -141,7 +151,7 @@ export class RecordService {
    * Delete a record
    */
   async deleteRecord(id: string): Promise<ApiResponse<void>> {
-    return apiClient.delete(`/api/records/${id}`);
+    return apiClient.delete<void>(`/api/records/${id}`);
   }
 
   /**
@@ -154,8 +164,13 @@ export class RecordService {
   /**
    * Reject a record
    */
-  async rejectRecord(id: string, reason?: string): Promise<ApiResponse<ProductRecord>> {
-    return apiClient.put<ProductRecord>(`/api/records/${id}/reject`, { reason });
+  async rejectRecord(
+    id: string,
+    reason?: string
+  ): Promise<ApiResponse<ProductRecord>> {
+    return apiClient.put<ProductRecord>(`/api/records/${id}/reject`, {
+      reason,
+    });
   }
 
   /**
@@ -197,7 +212,7 @@ export class RecordService {
     excludeId?: string
   ): Promise<ApiResponse<{ available: boolean }>> {
     const params = new URLSearchParams({ internalLot });
-    if (excludeId) params.set('excludeId', excludeId);
+    if (excludeId) params.set("excludeId", excludeId);
 
     return apiClient.get<{ available: boolean }>(
       `/api/records/validate-lot?${params.toString()}`
@@ -208,35 +223,37 @@ export class RecordService {
    * Format record display name
    */
   formatRecordDisplayName(record: ProductRecord): string {
-    return `${record.internalLot} - ${record.product?.name || 'Producto desconocido'}`;
+    return `${record.internalLot} - ${
+      record.product?.name || "Producto desconocido"
+    }`;
   }
 
   /**
    * Check if record can be edited
    */
   canEditRecord(record: ProductRecord): boolean {
-    return record.status === 'pending';
+    return record.status === "pending";
   }
 
   /**
    * Check if record can be deleted
    */
   canDeleteRecord(record: ProductRecord): boolean {
-    return record.status === 'pending';
+    return record.status === "pending";
   }
 
   /**
    * Check if record can be approved
    */
   canApproveRecord(record: ProductRecord): boolean {
-    return record.status === 'pending';
+    return record.status === "pending";
   }
 
   /**
    * Check if record can be rejected
    */
   canRejectRecord(record: ProductRecord): boolean {
-    return record.status === 'pending';
+    return record.status === "pending";
   }
 
   /**
@@ -244,14 +261,14 @@ export class RecordService {
    */
   getStatusColor(status: string): string {
     switch (status) {
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+      case "approved":
+        return "bg-green-100 text-green-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   }
 
@@ -260,14 +277,14 @@ export class RecordService {
    */
   getStatusLabel(status: string): string {
     switch (status) {
-      case 'approved':
-        return 'Aprobado';
-      case 'rejected':
-        return 'Rechazado';
-      case 'pending':
-        return 'Pendiente';
+      case "approved":
+        return "Aprobado";
+      case "rejected":
+        return "Rechazado";
+      case "pending":
+        return "Pendiente";
       default:
-        return 'Desconocido';
+        return "Desconocido";
     }
   }
 }

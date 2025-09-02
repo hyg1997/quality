@@ -15,282 +15,277 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useModal, useConfirmModal } from "@/hooks/useModal";
 import { useForm } from "@/hooks/useForm";
 import { useNotifications } from "@/hooks/useNotifications";
-import { parameterService, type Parameter } from "@/services/api/parameters";
-import { productService, type Product } from "@/services/api/products";
+import {
+  masterParameterService,
+  type MasterParameter,
+} from "@/services/api/masterParameters";
 
-interface ParameterFormData extends Record<string, unknown> {
-  productId: string;
+interface MasterParameterFormData extends Record<string, unknown> {
   name: string;
+  description?: string;
   type: "range" | "text" | "numeric";
-  expectedValue?: string;
+  defaultValue?: string;
   minRange?: number;
   maxRange?: number;
   unit?: string;
-  required: boolean;
   active: boolean;
 }
 
-export default function ParametersManagement() {
+export default function MasterParametersManagement() {
   const { data: session, status } = useSession();
   const { hasPermission } = usePermissions();
   const { success, error } = useNotifications();
-  const [parameters, setParameters] = useState<Parameter[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [masterParameters, setMasterParameters] = useState<MasterParameter[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
 
-  const createModal = useModal<Parameter>();
-  const editModal = useModal<Parameter>();
+  const createModal = useModal<MasterParameter>();
+  const editModal = useModal<MasterParameter>();
   const confirmModal = useConfirmModal();
 
-  const fetchParameters = useCallback(async () => {
+  const fetchMasterParameters = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await parameterService.getParameters({
+      const response = await masterParameterService.getMasterParameters({
         limit: 100,
       });
       if (response.success && response.data) {
-        setParameters(response.data.parameters);
+        setMasterParameters(response.data.masterParameters);
       }
     } catch (error) {
-      console.error("Error fetching parameters:", error);
+      console.error("Error fetching master parameters:", error);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const fetchProducts = useCallback(async () => {
-    try {
-      const response = await productService.getProducts({
-        limit: 100,
-      });
-      if (response.success && response.data) {
-        setProducts(response.data.products);
-      }
-    } catch (error) {
-      console.error("Error fetching products:", error);
-    }
-  }, []);
-
   useEffect(() => {
-    if (session && hasPermission("parameters:read")) {
-      fetchParameters();
-      fetchProducts();
+    if (session && hasPermission("content:read")) {
+      fetchMasterParameters();
     }
-  }, [session, hasPermission, fetchParameters, fetchProducts]);
+  }, [session, hasPermission, fetchMasterParameters]);
 
-  const handleCreateParameter = useCallback(
-    async (data: ParameterFormData) => {
+  const handleCreateMasterParameter = useCallback(
+    async (data: MasterParameterFormData) => {
       try {
-        const response = await parameterService.createParameter({
-          productId: data.productId,
+        const response = await masterParameterService.createMasterParameter({
           name: data.name,
+          description: data.description,
           type: data.type,
-          expectedValue: data.expectedValue,
+          defaultValue: data.defaultValue,
           minRange: data.minRange,
           maxRange: data.maxRange,
           unit: data.unit,
-          required: data.required,
           active: data.active,
         });
 
         if (response.success && response.data) {
           createModal.close();
-          await fetchParameters();
+          await fetchMasterParameters();
           success(
-            "Parámetro creado",
-            `El parámetro ${data.name} ha sido creado exitosamente`
+            "Parámetro maestro creado",
+            `El parámetro maestro ${data.name} ha sido creado exitosamente`
           );
         } else {
           error(
-            "Error al crear parámetro",
-            response.error || "No se pudo crear el parámetro"
+            "Error al crear parámetro maestro",
+            response.error || "No se pudo crear el parámetro maestro"
           );
         }
       } catch {
-        error("Error al crear parámetro", "Ha ocurrido un error inesperado");
+        error(
+          "Error al crear parámetro maestro",
+          "Ha ocurrido un error inesperado"
+        );
       }
     },
-    [createModal, fetchParameters, success, error]
+    [createModal, fetchMasterParameters, success, error]
   );
 
-  const handleEditParameter = useCallback(
-    async (data: ParameterFormData) => {
+  const handleEditMasterParameter = useCallback(
+    async (data: MasterParameterFormData) => {
       if (!editModal.data) return;
 
       try {
-        const response = await parameterService.updateParameter(
+        const response = await masterParameterService.updateMasterParameter(
           editModal.data.id,
           {
-            productId: data.productId,
             name: data.name,
+            description: data.description,
             type: data.type,
-            expectedValue: data.expectedValue,
+            defaultValue: data.defaultValue,
             minRange: data.minRange,
             maxRange: data.maxRange,
             unit: data.unit,
-            required: data.required,
             active: data.active,
           }
         );
 
         if (response.success && response.data) {
           editModal.close();
-          await fetchParameters();
+          await fetchMasterParameters();
           success(
-            "Parámetro actualizado",
-            `El parámetro ${data.name} ha sido actualizado exitosamente`
+            "Parámetro maestro actualizado",
+            `El parámetro maestro ${data.name} ha sido actualizado exitosamente`
           );
         } else {
           error(
-            "Error al actualizar parámetro",
-            response.error || "No se pudo actualizar el parámetro"
+            "Error al actualizar parámetro maestro",
+            response.error || "No se pudo actualizar el parámetro maestro"
           );
         }
       } catch {
         error(
-          "Error al actualizar parámetro",
+          "Error al actualizar parámetro maestro",
           "Ha ocurrido un error inesperado"
         );
       }
     },
-    [editModal, fetchParameters, success, error]
+    [editModal, fetchMasterParameters, success, error]
   );
 
-  const handleDeleteParameter = useCallback(
-    async (parameter: Parameter) => {
+  const handleDeleteMasterParameter = useCallback(
+    async (masterParameter: MasterParameter) => {
       confirmModal.confirm({
-        title: "Eliminar Parámetro",
-        message: `¿Estás seguro de que quieres eliminar el parámetro "${parameter.name}"?`,
+        title: "Eliminar Parámetro Maestro",
+        message: `¿Estás seguro de que quieres eliminar el parámetro maestro "${masterParameter.name}"?`,
         type: "danger",
         confirmText: "Eliminar",
         onConfirm: async () => {
           try {
-            const response = await parameterService.deleteParameter(
-              parameter.id
+            const response = await masterParameterService.deleteMasterParameter(
+              masterParameter.id
             );
 
             if (response.success) {
-              await fetchParameters();
+              await fetchMasterParameters();
               success(
-                "Parámetro eliminado",
-                `El parámetro ${parameter.name} ha sido eliminado exitosamente`
+                "Parámetro maestro eliminado",
+                `El parámetro maestro ${masterParameter.name} ha sido eliminado exitosamente`
               );
             } else {
               error(
-                "Error al eliminar parámetro",
-                response.error || "No se pudo eliminar el parámetro"
+                "Error al eliminar parámetro maestro",
+                response.error || "No se pudo eliminar el parámetro maestro"
               );
             }
           } catch {
             error(
-              "Error al eliminar parámetro",
+              "Error al eliminar parámetro maestro",
               "Ha ocurrido un error inesperado"
             );
           }
         },
       });
     },
-    [confirmModal, fetchParameters, success, error]
+    [confirmModal, fetchMasterParameters, success, error]
   );
 
   const handleToggleStatus = useCallback(
-    async (parameter: Parameter) => {
+    async (masterParameter: MasterParameter) => {
       try {
-        const response = await parameterService.toggleParameterStatus(
-          parameter.id,
-          !parameter.active
-        );
+        const response =
+          await masterParameterService.toggleMasterParameterStatus(
+            masterParameter.id,
+            !masterParameter.active
+          );
 
         if (response.success && response.data) {
-          await fetchParameters();
-          const statusText = !parameter.active ? "activado" : "desactivado";
+          await fetchMasterParameters();
+          const statusText = !masterParameter.active
+            ? "activado"
+            : "desactivado";
           success(
             "Estado actualizado",
-            `El parámetro ${parameter.name} ha sido ${statusText} exitosamente`
+            `El parámetro maestro ${masterParameter.name} ha sido ${statusText} exitosamente`
           );
         } else {
           error(
             "Error al cambiar estado",
-            response.error || "No se pudo cambiar el estado del parámetro"
+            response.error ||
+              "No se pudo cambiar el estado del parámetro maestro"
           );
         }
       } catch {
         error("Error al cambiar estado", "Ha ocurrido un error inesperado");
       }
     },
-    [fetchParameters, success, error]
+    [fetchMasterParameters, success, error]
   );
 
   // Memoize columns definition to prevent recreation on every render
-  const columns: ColumnDef<Parameter>[] = useMemo(
+  const columns: ColumnDef<MasterParameter>[] = useMemo(
     () => [
       {
         key: "name",
         header: "Nombre",
-        cell: (parameter) => (
+        cell: (masterParameter) => (
           <div>
-            <div className="font-medium text-gray-900">{parameter.name}</div>
-            <div className="text-sm text-gray-500">
-              {parameter.product?.name || "Producto no encontrado"}
+            <div className="font-medium text-gray-900">
+              {masterParameter.name}
             </div>
+            {masterParameter.description && (
+              <div className="text-sm text-gray-500">
+                {masterParameter.description}
+              </div>
+            )}
           </div>
         ),
       },
       {
         key: "type",
         header: "Tipo",
-        cell: (parameter) => {
+        cell: (masterParameter) => {
           const typeColors = {
             range: "bg-blue-100 text-blue-800",
             text: "bg-green-100 text-green-800",
             numeric: "bg-purple-100 text-purple-800",
           };
           return (
-            <Badge className={typeColors[parameter.type]}>
-              {parameter.type}
+            <Badge className={typeColors[masterParameter.type]}>
+              {masterParameter.type}
             </Badge>
           );
         },
       },
       {
-        key: "expectedValue",
-        header: "Valor Esperado",
-        cell: (parameter) => (
+        key: "defaultValue",
+        header: "Valor por Defecto",
+        cell: (masterParameter) => (
           <div className="text-sm">
-            {parameter.type === "range" &&
-            parameter.minRange !== undefined &&
-            parameter.maxRange !== undefined
-              ? `${parameter.minRange} - ${parameter.maxRange}${
-                  parameter.unit ? ` ${parameter.unit}` : ""
+            {masterParameter.type === "range" &&
+            masterParameter.minRange !== undefined &&
+            masterParameter.maxRange !== undefined
+              ? `${masterParameter.minRange} - ${masterParameter.maxRange}${
+                  masterParameter.unit ? ` ${masterParameter.unit}` : ""
                 }`
-              : parameter.expectedValue || "-"}
+              : masterParameter.defaultValue || "-"}
           </div>
         ),
       },
       {
-        key: "required",
-        header: "Requerido",
-        cell: (parameter) => (
-          <Badge variant={parameter.required ? "success" : "default"}>
-            {parameter.required ? "Sí" : "No"}
-          </Badge>
+        key: "unit",
+        header: "Unidad",
+        cell: (masterParameter) => (
+          <div className="text-sm">{masterParameter.unit || "-"}</div>
         ),
       },
       {
         key: "active",
         header: "Estado",
-        cell: (parameter) => (
-          <Badge variant={parameter.active ? "success" : "default"}>
-            {parameter.active ? "Activo" : "Inactivo"}
+        cell: (masterParameter) => (
+          <Badge variant={masterParameter.active ? "success" : "default"}>
+            {masterParameter.active ? "Activo" : "Inactivo"}
           </Badge>
         ),
       },
       {
         key: "createdAt",
         header: "Creado",
-        cell: (parameter) => (
+        cell: (masterParameter) => (
           <div className="text-sm text-gray-500">
-            {new Date(parameter.createdAt).toLocaleDateString()}
+            {new Date(masterParameter.createdAt).toLocaleDateString()}
           </div>
         ),
       },
@@ -299,31 +294,31 @@ export default function ParametersManagement() {
   );
 
   // Memoize actions definition to prevent recreation on every render
-  const actions: ActionDef<Parameter>[] = useMemo(
+  const actions: ActionDef<MasterParameter>[] = useMemo(
     () => [
       {
         label: "Editar",
-        onClick: (parameter) => editModal.open(parameter),
+        onClick: (masterParameter) => editModal.open(masterParameter),
         icon: <Edit className="h-4 w-4" />,
         variant: "secondary",
-        hidden: () => !hasPermission("parameters:update"),
+        hidden: () => !hasPermission("content:update"),
       },
       {
         label: "Cambiar Estado",
         onClick: handleToggleStatus,
         icon: <Settings className="h-4 w-4" />,
         variant: "secondary",
-        hidden: () => !hasPermission("parameters:update"),
+        hidden: () => !hasPermission("content:update"),
       },
       {
         label: "Eliminar",
-        onClick: handleDeleteParameter,
+        onClick: handleDeleteMasterParameter,
         icon: <Trash2 className="h-4 w-4" />,
         variant: "danger",
-        hidden: () => !hasPermission("parameters:delete"),
+        hidden: () => !hasPermission("content:delete"),
       },
     ],
-    [editModal, handleToggleStatus, handleDeleteParameter, hasPermission]
+    [editModal, handleToggleStatus, handleDeleteMasterParameter, hasPermission]
   );
 
   if (status === "loading") {
@@ -337,7 +332,7 @@ export default function ParametersManagement() {
     );
   }
 
-  if (!session || !hasPermission("parameters:read")) {
+  if (!session || !hasPermission("content:read")) {
     return (
       <PageLayout title="Acceso Denegado">
         <div className="text-center py-12">
@@ -346,7 +341,7 @@ export default function ParametersManagement() {
             Acceso Restringido
           </h3>
           <p className="text-gray-600">
-            No tienes permisos para ver la gestión de parámetros.
+            No tienes permisos para ver la gestión de parámetros maestros.
           </p>
         </div>
       </PageLayout>
@@ -356,82 +351,76 @@ export default function ParametersManagement() {
   return (
     <>
       <PageLayout
-        title="Gestión de Parámetros"
+        title="Gestión de Parámetros Maestros"
         actions={
-          hasPermission("parameters:create") ? (
+          hasPermission("content:create") ? (
             <button
               onClick={() => createModal.open()}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Crear Parámetro
+              Crear Parámetro Maestro
             </button>
           ) : undefined
         }
       >
         <DataTable
-          data={parameters as unknown as Record<string, unknown>[]}
-          columns={columns as unknown as ColumnDef<Record<string, unknown>>[]}
-          actions={actions as unknown as ActionDef<Record<string, unknown>>[]}
+          data={masterParameters}
+          columns={columns}
+          actions={actions}
           loading={loading}
-          emptyMessage="No hay parámetros configurados"
+          emptyMessage="No hay parámetros maestros configurados"
         />
       </PageLayout>
 
-      {/* Modal de Crear Parámetro */}
-      <ParameterFormModal
+      {/* Modal de Crear Parámetro Maestro */}
+      <MasterParameterFormModal
         isOpen={createModal.isOpen}
         onClose={createModal.close}
-        onSubmit={handleCreateParameter}
-        products={products}
-        title="Crear Parámetro"
+        onSubmit={handleCreateMasterParameter}
+        title="Crear Parámetro Maestro"
       />
 
-      {/* Modal de Editar Parámetro */}
-      <ParameterFormModal
+      {/* Modal de Editar Parámetro Maestro */}
+      <MasterParameterFormModal
         isOpen={editModal.isOpen}
         onClose={editModal.close}
-        onSubmit={(data) => editModal.data && handleEditParameter(data)}
-        products={products}
-        parameter={editModal.data}
-        title="Editar Parámetro"
+        onSubmit={(data) => editModal.data && handleEditMasterParameter(data)}
+        masterParameter={editModal.data}
+        title="Editar Parámetro Maestro"
       />
     </>
   );
 }
 
-// Componente Modal para Crear/Editar Parámetros
-interface ParameterFormModalProps {
+// Componente Modal para Crear/Editar Parámetros Maestros
+interface MasterParameterFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: ParameterFormData) => void;
-  products: Product[];
-  parameter?: Parameter;
+  onSubmit: (data: MasterParameterFormData) => void;
+  masterParameter?: MasterParameter;
   title: string;
 }
 
-function ParameterFormModal({
+function MasterParameterFormModal({
   isOpen,
   onClose,
   onSubmit,
-  products,
-  parameter,
+  masterParameter,
   title,
-}: ParameterFormModalProps) {
-  const form = useForm<ParameterFormData>({
+}: MasterParameterFormModalProps) {
+  const form = useForm<MasterParameterFormData>({
     initialValues: {
-      productId: parameter?.productId || "",
-      name: parameter?.name || "",
-      type: parameter?.type || "text",
-      expectedValue: parameter?.expectedValue || "",
-      minRange: parameter?.minRange || undefined,
-      maxRange: parameter?.maxRange || undefined,
-      unit: parameter?.unit || "",
-      required: parameter?.required ?? false,
-      active: parameter?.active ?? true,
+      name: masterParameter?.name || "",
+      description: masterParameter?.description || "",
+      type: masterParameter?.type || "text",
+      defaultValue: masterParameter?.defaultValue || "",
+      minRange: masterParameter?.minRange || undefined,
+      maxRange: masterParameter?.maxRange || undefined,
+      unit: masterParameter?.unit || "",
+      active: masterParameter?.active ?? true,
     },
     validationRules: {
-      productId: { required: true },
       name: { required: true, minLength: 2 },
       type: { required: true },
     },
@@ -440,7 +429,7 @@ function ParameterFormModal({
     },
   });
 
-  const selectedType = form.values.type;
+  const selectedType = form.values.type as "range" | "text" | "numeric";
 
   return (
     <FormModal
@@ -456,31 +445,6 @@ function ParameterFormModal({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Producto *
-            </label>
-            <select
-              name={form.getFieldProps("productId").name}
-              value={String(form.getFieldProps("productId").value)}
-              onChange={form.getFieldProps("productId").onChange}
-              onBlur={form.getFieldProps("productId").onBlur}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Seleccionar producto</option>
-              {products.map((product) => (
-                <option key={product.id} value={product.id}>
-                  {product.name} {product.code ? `(${product.code})` : ""}
-                </option>
-              ))}
-            </select>
-            {form.errors.productId && (
-              <p className="text-red-500 text-sm mt-1">
-                {form.errors.productId}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
               Nombre *
             </label>
             <input
@@ -490,32 +454,47 @@ function ParameterFormModal({
               onChange={form.getFieldProps("name").onChange}
               onBlur={form.getFieldProps("name").onBlur}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Nombre del parámetro"
+              placeholder="Nombre del parámetro maestro"
             />
             {form.errors.name && (
               <p className="text-red-500 text-sm mt-1">{form.errors.name}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo *
+            </label>
+            <select
+              name={form.getFieldProps("type").name}
+              value={String(form.getFieldProps("type").value)}
+              onChange={form.getFieldProps("type").onChange}
+              onBlur={form.getFieldProps("type").onBlur}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="text">Texto</option>
+              <option value="numeric">Numérico</option>
+              <option value="range">Rango</option>
+            </select>
+            {form.errors.type && (
+              <p className="text-red-500 text-sm mt-1">{form.errors.type}</p>
             )}
           </div>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Tipo *
+            Descripción
           </label>
-          <select
-            name={form.getFieldProps("type").name}
-            value={String(form.getFieldProps("type").value)}
-            onChange={form.getFieldProps("type").onChange}
-            onBlur={form.getFieldProps("type").onBlur}
+          <textarea
+            name={form.getFieldProps("description").name}
+            value={String(form.getFieldProps("description").value)}
+            onChange={form.getFieldProps("description").onChange}
+            onBlur={form.getFieldProps("description").onBlur}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="text">Texto</option>
-            <option value="numeric">Numérico</option>
-            <option value="range">Rango</option>
-          </select>
-          {form.errors.type && (
-            <p className="text-red-500 text-sm mt-1">{form.errors.type}</p>
-          )}
+            placeholder="Descripción del parámetro maestro"
+            rows={3}
+          />
         </div>
 
         {selectedType === "range" ? (
@@ -566,31 +545,21 @@ function ParameterFormModal({
         ) : (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Valor Esperado
+              Valor por Defecto
             </label>
             <input
               type={selectedType === "numeric" ? "number" : "text"}
-              name={form.getFieldProps("expectedValue").name}
-              value={String(form.getFieldProps("expectedValue").value)}
-              onChange={form.getFieldProps("expectedValue").onChange}
-              onBlur={form.getFieldProps("expectedValue").onBlur}
+              name={form.getFieldProps("defaultValue").name}
+              value={String(form.getFieldProps("defaultValue").value)}
+              onChange={form.getFieldProps("defaultValue").onChange}
+              onBlur={form.getFieldProps("defaultValue").onBlur}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Valor esperado del parámetro"
+              placeholder="Valor por defecto del parámetro"
             />
           </div>
         )}
 
         <div className="flex items-center space-x-6">
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={Boolean(form.values.required)}
-              onChange={(e) => form.setValue("required", e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">Requerido</span>
-          </label>
-
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
