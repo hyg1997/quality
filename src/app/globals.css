@@ -24,3 +24,12 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Override Tailwind's form element inheritance */
+input,
+select,
+optgroup,
+textarea,
+::file-selector-button {
+  color: initial;
+}

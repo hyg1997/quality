@@ -1,0 +1,245 @@
+// Modern Authentication & Authorization Schema
+// Optimized for scalability, security, and maintainability
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// CORE USER MANAGEMENT
+// ============================================================================
+
+// User model with enhanced security features
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  username          String?   @unique
+  fullName          String    @map("full_name")
+  avatar            String?
+  
+  // Authentication
+  password          String?
+  emailVerified     DateTime? @map("email_verified")
+  
+  // Security
+  twoFactorEnabled  Boolean   @default(false) @map("two_factor_enabled")
+  twoFactorSecret   String?   @map("two_factor_secret")
+  backupCodes       String?   @map("backup_codes") // JSON string of backup codes
+  
+  // Account status
+  status            String    @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED, PENDING_VERIFICATION
+  lastLoginAt       DateTime?  @map("last_login_at")
+  lastLoginIp       String?    @map("last_login_ip")
+  
+  // Metadata
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  sessions          UserSession[]
+  refreshTokens     RefreshToken[]
+  userRoles         UserRole[]
+  auditLogs         AuditLog[]
+  passwordResets    PasswordReset[]
+  
+  @@map("users")
+}
+
+// UserStatus values: ACTIVE, INACTIVE, SUSPENDED, PENDING_VERIFICATION
+// Stored as String since SQLite doesn't support enums
+
+// ============================================================================
+// ROLE-BASED ACCESS CONTROL (RBAC)
+// ============================================================================
+
+// Roles for hierarchical permissions
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String   @map("display_name")
+  description String?
+  level       Int      @default(0) // Hierarchy level (0 = lowest)
+  isSystem    Boolean  @default(false) @map("is_system") // System roles can't be deleted
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  userRoles     UserRole[]
+  rolePermissions RolePermission[]
+  
+  @@map("roles")
+}
+
+// Permissions for granular access control
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "users:create", "posts:read"
+  displayName String   @map("display_name")
+  description String?
+  resource    String   // e.g., "users", "posts", "settings"
+  action      String   // e.g., "create", "read", "update", "delete"
+  conditions  String?  // JSON string for dynamic permissions
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  rolePermissions RolePermission[]
+  
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+// Many-to-many: User <-> Role
+model UserRole {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  roleId    String    @map("role_id")
+  grantedBy String?   @map("granted_by")
+  grantedAt DateTime  @default(now()) @map("granted_at")
+  expiresAt DateTime? @map("expires_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+// Many-to-many: Role <-> Permission
+model RolePermission {
+  id           String   @id @default(cuid())
+  roleId       String   @map("role_id")
+  permissionId String   @map("permission_id")
+  conditions   String?  // JSON string to override or extend permission conditions
+  
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ============================================================================
+// SESSION MANAGEMENT
+// ============================================================================
+
+// Enhanced session management
+model UserSession {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  token       String    @unique
+  
+  // Session metadata
+  ipAddress   String?   @map("ip_address")
+  userAgent   String?   @map("user_agent")
+  device      String?
+  location    String?
+  
+  // Session lifecycle
+  createdAt   DateTime  @default(now()) @map("created_at")
+  lastUsedAt  DateTime  @default(now()) @map("last_used_at")
+  expiresAt   DateTime  @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_sessions")
+}
+
+// Refresh tokens for JWT strategy
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("refresh_tokens")
+}
+
+// ============================================================================
+// SECURITY & AUDIT
+// ============================================================================
+
+// Comprehensive audit logging
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?  @map("user_id")
+  action      String   // e.g., "user.login", "user.create", "permission.grant"
+  resource    String?  // What was affected
+  resourceId  String?  @map("resource_id")
+  
+  // Context
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  metadata    String?  // JSON string for additional context data
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// Password reset with enhanced security
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  
+  // Security tracking
+  ipAddress String?   @map("ip_address")
+  userAgent String?   @map("user_agent")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("password_resets")
+}
+
+// ============================================================================
+// NEXTAUTH.JS COMPATIBILITY (Optional)
+// ============================================================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
