@@ -15,6 +15,7 @@ import { PageLayout } from "@/components/layouts/AppLayout";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useModal, useConfirmModal } from "@/hooks/useModal";
 import { useForm } from "@/hooks/useForm";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
   userService,
   roleService,
@@ -33,6 +34,7 @@ interface UserFormData extends Record<string, unknown> {
 export default function UsersManagement() {
   const { data: session, status } = useSession();
   const { hasPermission, isAdmin } = usePermissions();
+  const { success, error } = useNotifications();
 
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<UserRole[]>([]);
@@ -43,13 +45,13 @@ export default function UsersManagement() {
   const confirmModal = useConfirmModal();
 
   const fetchUsers = useCallback(async () => {
-    if (!loading) return; // Evitar llamadas duplicadas
+    setLoading(true);
     const response = await userService.getUsers();
     if (response.success && response.data) {
       setUsers(response.data);
     }
     setLoading(false);
-  }, [loading]);
+  }, []);
 
   const fetchRoles = useCallback(async () => {
     const response = await roleService.getRoles();
@@ -141,11 +143,11 @@ export default function UsersManagement() {
   );
 
   useEffect(() => {
-    if (session && hasPermission("users:read") && loading) {
+    if (session && hasPermission("users:read")) {
       fetchUsers();
       fetchRoles();
     }
-  }, [session, hasPermission, loading, fetchUsers, fetchRoles]);
+  }, [session, hasPermission, fetchUsers, fetchRoles]);
 
   const handleDeleteUser = useCallback(
     async (user: User) => {
@@ -168,14 +170,32 @@ export default function UsersManagement() {
         type: "danger",
         confirmText: "Eliminar",
         onConfirm: async () => {
-          const response = await userService.deleteUser(user.id);
-          if (response.success) {
-            await fetchUsers();
+          try {
+            const response = await userService.deleteUser(user.id);
+            if (response.success) {
+              await fetchUsers();
+              success(
+                "Usuario eliminado",
+                `El usuario ${userService.formatUserDisplayName(
+                  user
+                )} ha sido eliminado exitosamente`
+              );
+            } else {
+              error(
+                "Error al eliminar usuario",
+                response.error || "No se pudo eliminar el usuario"
+              );
+            }
+          } catch {
+            error(
+              "Error al eliminar usuario",
+              "Ha ocurrido un error inesperado"
+            );
           }
         },
       });
     },
-    [confirmModal, fetchUsers]
+    [confirmModal, fetchUsers, success, error]
   );
 
   const handleDisable2FA = useCallback(
@@ -188,43 +208,88 @@ export default function UsersManagement() {
         type: "warning",
         confirmText: "Deshabilitar",
         onConfirm: async () => {
-          const response = await userService.disable2FA(user.id);
-          if (response.success) {
-            await fetchUsers();
+          try {
+            const response = await userService.disable2FA(user.id);
+            if (response.success) {
+              await fetchUsers();
+              success(
+                "2FA deshabilitado",
+                `La autenticación de dos factores ha sido deshabilitada para ${userService.formatUserDisplayName(
+                  user
+                )}`
+              );
+            } else {
+              error(
+                "Error al deshabilitar 2FA",
+                response.error ||
+                  "No se pudo deshabilitar la autenticación de dos factores"
+              );
+            }
+          } catch {
+            error(
+              "Error al deshabilitar 2FA",
+              "Ha ocurrido un error inesperado"
+            );
           }
         },
       });
     },
-    [confirmModal, fetchUsers]
+    [confirmModal, fetchUsers, success, error]
   );
 
   const handleCreateUser = async (formData: UserFormData) => {
-    const response = await userService.createUser({
-      email: formData.email,
-      username: formData.username || undefined,
-      fullName: formData.fullName,
-      password: formData.password,
-      roleIds: formData.roleIds,
-    });
+    try {
+      const response = await userService.createUser({
+        email: formData.email,
+        username: formData.username || undefined,
+        fullName: formData.fullName,
+        password: formData.password,
+        roleIds: formData.roleIds,
+      });
 
-    if (response.success) {
-      createModal.close();
-      await fetchUsers();
+      if (response.success) {
+        createModal.close();
+        await fetchUsers();
+        success(
+          "Usuario creado",
+          `El usuario ${formData.fullName} ha sido creado exitosamente`
+        );
+      } else {
+        error(
+          "Error al crear usuario",
+          response.error || "No se pudo crear el usuario"
+        );
+      }
+    } catch {
+      error("Error al crear usuario", "Ha ocurrido un error inesperado");
     }
   };
 
   const handleUpdateUser = async (userId: string, formData: UserFormData) => {
-    const response = await userService.updateUser(userId, {
-      email: formData.email,
-      username: formData.username || undefined,
-      fullName: formData.fullName,
-      password: formData.password || undefined,
-      roleIds: formData.roleIds,
-    });
+    try {
+      const response = await userService.updateUser(userId, {
+        email: formData.email,
+        username: formData.username || undefined,
+        fullName: formData.fullName,
+        password: formData.password || undefined,
+        roleIds: formData.roleIds,
+      });
 
-    if (response.success) {
-      editModal.close();
-      await fetchUsers();
+      if (response.success) {
+        editModal.close();
+        await fetchUsers();
+        success(
+          "Usuario actualizado",
+          `El usuario ${formData.fullName} ha sido actualizado exitosamente`
+        );
+      } else {
+        error(
+          "Error al actualizar usuario",
+          response.error || "No se pudo actualizar el usuario"
+        );
+      }
+    } catch {
+      error("Error al actualizar usuario", "Ha ocurrido un error inesperado");
     }
   };
 
@@ -263,10 +328,7 @@ export default function UsersManagement() {
 
   if (status === "loading" || loading) {
     return (
-      <PageLayout
-        title="Gestión de Usuarios"
-        description="Administra usuarios del sistema"
-      >
+      <PageLayout title="Administra usuarios del sistema">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
           <div className="h-64 bg-gray-200 rounded"></div>
@@ -294,8 +356,7 @@ export default function UsersManagement() {
   return (
     <>
       <PageLayout
-        title="Gestión de Usuarios"
-        description="Administra usuarios del sistema"
+        title="Administra usuarios del sistema"
         actions={
           hasPermission("users:create") ? (
             <button

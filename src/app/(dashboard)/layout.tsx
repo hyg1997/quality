@@ -4,14 +4,23 @@ import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { hasPermission, isAdmin, PERMISSIONS } from "@/lib/permissions";
-import { Home, Users, Package, ClipboardList, TrendingUp, Settings, LogOut } from "lucide-react";
+import {
+  Home,
+  Users,
+  Package,
+  ClipboardList,
+  TrendingUp,
+  Settings,
+  Sliders,
+  LogOut,
+} from "lucide-react";
 
 interface MenuItem {
-  name: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  permission?: string
-  adminOnly?: boolean
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  permission?: string;
+  adminOnly?: boolean;
 }
 
 const menuItems: MenuItem[] = [
@@ -34,10 +43,16 @@ const menuItems: MenuItem[] = [
     permission: PERMISSIONS.CONTENT.READ,
   },
   {
+    name: "Gestión de Parámetros",
+    href: "/parameters",
+    icon: Sliders,
+    permission: PERMISSIONS.CONTENT.READ,
+  },
+  {
     name: "Registro de Productos",
     href: "/records",
     icon: ClipboardList,
-    permission: PERMISSIONS.CONTENT.READ,
+    permission: PERMISSIONS.RECORDS?.READ || PERMISSIONS.CONTENT.READ,
   },
   {
     name: "Reportes",

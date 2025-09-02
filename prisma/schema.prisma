@@ -46,6 +46,8 @@ model User {
   userRoles         UserRole[]
   auditLogs         AuditLog[]
   passwordResets    PasswordReset[]
+  records           Record[]
+  approvedRecords   Record[] @relation("RecordApprover")
   
   @@map("users")
 }
@@ -192,6 +194,129 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ============================================================================
+// PRODUCT MANAGEMENT
+// ============================================================================
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  code        String?  @unique
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  parameters  Parameter[]
+  records     Record[]
+
+  @@map("products")
+}
+
+model Parameter {
+  id                String  @id @default(cuid())
+  productId         String
+  masterParameterId String?
+  name              String
+  type              String  // 'range', 'text', 'numeric'
+  expectedValue     String?
+  minRange          Float?
+  maxRange          Float?
+  unit              String?
+  required          Boolean @default(true)
+  active            Boolean @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  masterParameter   MasterParameter? @relation(fields: [masterParameterId], references: [id], onDelete: SetNull)
+  controls          Control[]
+
+  @@unique([productId, name], name: "productId_name")
+  @@map("parameters")
+}
+
+model MasterParameter {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  description  String?
+  type         String   // 'range', 'text', 'numeric'
+  defaultValue String?
+  minRange     Float?
+  maxRange     Float?
+  unit         String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  parameters   Parameter[]
+
+  @@map("master_parameters")
+}
+
+model Record {
+  id              String   @id @default(cuid())
+  productId       String
+  internalLot     String
+  supplierLot     String?
+  quantity        Float
+  registrationDate DateTime @default(now())
+  expirationDate  DateTime?
+  observations    String?
+  status          String   @default("pending") // 'pending', 'approved', 'rejected'
+  userId          String
+  approvedBy      String?
+  approvalDate    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  product         Product @relation(fields: [productId], references: [id])
+  user            User    @relation(fields: [userId], references: [id])
+  approver        User?   @relation("RecordApprover", fields: [approvedBy], references: [id])
+  controls        Control[]
+  photos          Photo[]
+
+  @@map("records")
+}
+
+model Control {
+  id            String   @id @default(cuid())
+  recordId      String
+  parameterId   String?
+  parameterName String
+  fullRange     String
+  controlValue  Float?
+  textControl   String?
+  parameterType String?
+  observation   String?
+  outOfRange    Boolean  @default(false)
+  alertMessage  String?
+  createdAt     DateTime @default(now())
+
+  // Relations
+  record        Record     @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  parameter     Parameter? @relation(fields: [parameterId], references: [id])
+
+  @@map("controls")
+}
+
+model Photo {
+  id          String   @id @default(cuid())
+  recordId    String
+  filename    String
+  base64Data  String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  record      Record @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@map("photos")
 }
 
 // Password reset with enhanced security

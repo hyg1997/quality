@@ -7,3 +7,6 @@ export type { User, UserRole, CreateUserData, UpdateUserData } from './users'
 
 export { roleService, RoleService } from './roles'
 export type { Role, Permission, CreateRoleData, UpdateRoleData, PermissionsResponse } from './roles'
+
+export { recordService, RecordService } from './records'
+export type { ProductRecord, CreateRecordData, UpdateRecordData, RecordsQueryParams } from './records'
