@@ -17,9 +17,9 @@ import {
 } from "@/components/ui";
 import { PageLayout } from "@/components/layouts/AppLayout";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useApi } from "@/hooks/useApi";
 import { useModal, useConfirmModal } from "@/hooks/useModal";
 import { useForm } from "@/hooks/useForm";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface Role extends Record<string, unknown> {
   id: string;
@@ -51,109 +51,162 @@ interface RoleFormData extends Record<string, unknown> {
 
 export default function RolesManagementPage() {
   const { data: session, status } = useSession();
-  const { isAdmin } = usePermissions();
-  const api = useApi();
+  const { isAdmin, hasPermission } = usePermissions();
+  const { success, error } = useNotifications();
   const [roles, setRoles] = useState<Role[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
 
-  // Lista estática de permisos para evitar llamadas a la API
-  const permissions: Permission[] = useMemo(
-    () => [
-      {
-        id: "1",
-        name: "users:create",
-        displayName: "Crear Usuarios",
-        description: null,
-        resource: "users",
-        action: "create",
-      },
-      {
-        id: "2",
-        name: "users:read",
-        displayName: "Ver Usuarios",
-        description: null,
-        resource: "users",
-        action: "read",
-      },
-      {
-        id: "3",
-        name: "users:update",
-        displayName: "Editar Usuarios",
-        description: null,
-        resource: "users",
-        action: "update",
-      },
-      {
-        id: "4",
-        name: "users:delete",
-        displayName: "Eliminar Usuarios",
-        description: null,
-        resource: "users",
-        action: "delete",
-      },
-      {
-        id: "5",
-        name: "roles:create",
-        displayName: "Crear Roles",
-        description: null,
-        resource: "roles",
-        action: "create",
-      },
-      {
-        id: "6",
-        name: "roles:read",
-        displayName: "Ver Roles",
-        description: null,
-        resource: "roles",
-        action: "read",
-      },
-      {
-        id: "7",
-        name: "roles:update",
-        displayName: "Editar Roles",
-        description: null,
-        resource: "roles",
-        action: "update",
-      },
-      {
-        id: "8",
-        name: "roles:delete",
-        displayName: "Eliminar Roles",
-        description: null,
-        resource: "roles",
-        action: "delete",
-      },
-      {
-        id: "9",
-        name: "analytics:read",
-        displayName: "Ver Reportes",
-        description: null,
-        resource: "analytics",
-        action: "read",
-      },
-      {
-        id: "10",
-        name: "analytics:export",
-        displayName: "Exportar Reportes",
-        description: null,
-        resource: "analytics",
-        action: "export",
-      },
-    ],
-    []
-  );
   const createModal = useModal<Role>();
   const editModal = useModal<Role>();
   const confirmModal = useConfirmModal();
 
   const fetchRoles = useCallback(async () => {
-    if (!loading) return; // Evitar llamadas duplicadas
-    const response = await api.get("/api/roles");
-    if (response.success && response.data) {
-      setRoles(response.data as Role[]);
+    setLoading(true);
+    try {
+      const response = await fetch("/api/roles");
+      if (response.ok) {
+        const data = await response.json();
+        setRoles(data);
+      } else {
+        console.error("Error fetching roles:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }, [api, loading]);
+  }, []);
+
+  const fetchPermissions = useCallback(async () => {
+    setPermissionsLoading(true);
+    try {
+      const response = await fetch("/api/permissions");
+      if (response.ok) {
+        const data = await response.json();
+        setPermissions(data.permissions || []);
+      } else {
+        console.error("Error fetching permissions:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+    } finally {
+      setPermissionsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (session && hasPermission("roles:read")) {
+      fetchRoles();
+      fetchPermissions();
+    }
+  }, [session, hasPermission, fetchRoles, fetchPermissions]);
+
+  const handleCreateRole = useCallback(
+    async (data: RoleFormData) => {
+      try {
+        const response = await fetch("/api/roles", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: data.name,
+            displayName: data.displayName,
+            description: data.description,
+            level: data.level,
+            permissions: data.permissions,
+          }),
+        });
+
+        if (response.ok) {
+          createModal.close();
+          await fetchRoles();
+          success(
+            "Rol creado",
+            `El rol ${data.displayName} ha sido creado exitosamente`
+          );
+        } else {
+          const errorData = await response.json();
+          error(
+            "Error al crear rol",
+            errorData.error || "No se pudo crear el rol"
+          );
+        }
+      } catch {
+        error("Error al crear rol", "Ha ocurrido un error inesperado");
+      }
+    },
+    [createModal, fetchRoles, success, error]
+  );
+
+  const handleEditRole = useCallback(
+    async (data: RoleFormData) => {
+      if (!editModal.data) return;
+
+      try {
+        const response = await fetch(`/api/roles/${editModal.data.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: data.name,
+            displayName: data.displayName,
+            description: data.description,
+            level: data.level,
+            permissions: data.permissions,
+          }),
+        });
+
+        if (response.ok) {
+          editModal.close();
+          await fetchRoles();
+          success(
+            "Rol actualizado",
+            `El rol ${data.displayName} ha sido actualizado exitosamente`
+          );
+        } else {
+          const errorData = await response.json();
+          error(
+            "Error al actualizar rol",
+            errorData.error || "No se pudo actualizar el rol"
+          );
+        }
+      } catch {
+        error("Error al actualizar rol", "Ha ocurrido un error inesperado");
+      }
+    },
+    [editModal, fetchRoles, success, error]
+  );
+
+  const handleDeleteRole = useCallback(
+    async (role: Role) => {
+      try {
+        const response = await fetch(`/api/roles/${role.id}`, {
+          method: "DELETE",
+        });
+
+        if (response.ok) {
+          await fetchRoles();
+          success(
+            "Rol eliminado",
+            `El rol ${role.displayName} ha sido eliminado exitosamente`
+          );
+        } else {
+          const errorData = await response.json();
+          error(
+            "Error al eliminar rol",
+            errorData.error || "No se pudo eliminar el rol"
+          );
+        }
+      } catch {
+        error("Error al eliminar rol", "Ha ocurrido un error inesperado");
+      }
+    },
+    [fetchRoles, success, error]
+  );
 
   // Memoize columns definition to prevent recreation on every render
   const columns: ColumnDef<Role>[] = useMemo(
@@ -191,7 +244,7 @@ export default function RolesManagementPage() {
         cell: (role) => (
           <div className="flex items-center space-x-1">
             <Users className="h-4 w-4 text-gray-400" />
-            <span>{role.userCount}</span>
+            <span>{role.userCount || 0}</span>
           </div>
         ),
       },
@@ -200,12 +253,12 @@ export default function RolesManagementPage() {
         header: "Permisos",
         cell: (role) => (
           <div className="flex flex-wrap gap-1">
-            {role.permissions.slice(0, 3).map((permission) => (
+            {role.permissions?.slice(0, 3).map((permission) => (
               <Badge key={permission.id} variant="info" size="sm">
                 {permission.displayName}
               </Badge>
             ))}
-            {role.permissions.length > 3 && (
+            {role.permissions && role.permissions.length > 3 && (
               <Badge variant="default" size="sm">
                 +{role.permissions.length - 3} más
               </Badge>
@@ -217,87 +270,44 @@ export default function RolesManagementPage() {
     []
   );
 
-  useEffect(() => {
-    if (session && loading) {
-      fetchRoles();
-    }
-  }, [session, loading, fetchRoles]);
-
-  const handleDeleteRole = useCallback(
-    async (role: Role) => {
-      confirmModal.confirm({
-        title: "Eliminar Rol",
-        message: `¿Estás seguro de que quieres eliminar el rol "${role.displayName}"?`,
-        type: "danger",
-        confirmText: "Eliminar",
-        onConfirm: async () => {
-          const response = await api.delete(`/api/roles/${role.id}`, {
-            showSuccessNotification: true,
-            successMessage: "Rol eliminado exitosamente",
-          });
-          if (response.success) {
-            await fetchRoles();
-          }
-        },
-      });
-    },
-    [api, confirmModal, fetchRoles]
-  );
-
-  const handleCreateRole = async (formData: RoleFormData) => {
-    const response = await api.post("/api/roles", formData, {
-      showSuccessNotification: true,
-      successMessage: "Rol creado exitosamente",
-    });
-    if (response.success) {
-      createModal.close();
-      await fetchRoles();
-    }
-  };
-
-  const handleUpdateRole = async (roleId: string, formData: RoleFormData) => {
-    const response = await api.put(`/api/roles/${roleId}`, formData, {
-      showSuccessNotification: true,
-      successMessage: "Rol actualizado exitosamente",
-    });
-    if (response.success) {
-      editModal.close();
-      await fetchRoles();
-    }
-  };
-
-  // Memoize actions definition to prevent recreation on every render
   const actions: ActionDef<Role>[] = useMemo(
     () => [
       {
         label: "Editar",
-        onClick: (role) => editModal.open(role),
         icon: <Edit className="h-4 w-4" />,
-        variant: "secondary",
-        disabled: (role) => role.isProtected,
+        onClick: (role) => editModal.open(role),
+        variant: "secondary" as const,
+        disabled: (role) => !hasPermission("roles:update") || role.isProtected,
       },
       {
         label: "Eliminar",
-        onClick: handleDeleteRole,
         icon: <Trash2 className="h-4 w-4" />,
-        variant: "danger",
-        hidden: (role) => role.isProtected || role.userCount > 0,
+        onClick: (role) => {
+          confirmModal.confirm({
+            title: "Eliminar Rol",
+            message: `¿Estás seguro de que quieres eliminar el rol "${role.displayName}"? Esta acción no se puede deshacer.`,
+            type: "danger",
+            confirmText: "Eliminar",
+            onConfirm: () => handleDeleteRole(role),
+          });
+        },
+        variant: "danger" as const,
+        disabled: (role) => !hasPermission("roles:delete") || role.isProtected,
       },
     ],
-    [editModal, handleDeleteRole]
+    [editModal, confirmModal, handleDeleteRole, hasPermission]
   );
 
-  if (status === "loading" || loading) {
+  // Loading state
+  if (status === "loading" || loading || permissionsLoading) {
     return (
-      <PageLayout
-        title="Gestión de Roles"
-        description="Administra roles y permisos del sistema"
-      >
+      <PageLayout title="Gestión de Roles">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardHeader>
                 <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -312,7 +322,8 @@ export default function RolesManagementPage() {
     );
   }
 
-  if (!session || !isAdmin()) {
+  // Access denied
+  if (!session || !isAdmin) {
     return (
       <PageLayout title="Acceso Denegado">
         <Card>
@@ -334,11 +345,11 @@ export default function RolesManagementPage() {
     <>
       <PageLayout
         title="Gestión de Roles"
-        description="Administra roles y permisos del sistema"
         actions={
           <Button
             onClick={() => createModal.open()}
             icon={<Plus className="h-4 w-4" />}
+            disabled={!hasPermission("roles:create")}
           >
             Crear Rol
           </Button>
@@ -349,11 +360,11 @@ export default function RolesManagementPage() {
           columns={columns}
           actions={actions}
           loading={loading}
-          emptyMessage="No hay roles configurados"
+          emptyMessage="No hay roles disponibles"
         />
       </PageLayout>
 
-      {/* Modal de Crear Rol */}
+      {/* Modal para crear rol */}
       <RoleFormModal
         isOpen={createModal.isOpen}
         onClose={createModal.close}
@@ -362,28 +373,26 @@ export default function RolesManagementPage() {
         title="Crear Nuevo Rol"
       />
 
-      {/* Modal de Editar Rol */}
+      {/* Modal para editar rol */}
       <RoleFormModal
         isOpen={editModal.isOpen}
         onClose={editModal.close}
-        onSubmit={(data) =>
-          editModal.data && handleUpdateRole(editModal.data.id, data)
-        }
+        onSubmit={handleEditRole}
         permissions={permissions}
         role={editModal.data}
         title="Editar Rol"
       />
 
-      {/* Modal de Confirmación */}
+      {/* Modal de confirmación */}
       <ConfirmModal
         isOpen={confirmModal.isOpen}
-        onClose={confirmModal.close}
-        onConfirm={confirmModal.handleConfirm}
         title={confirmModal.title}
         message={confirmModal.message}
         type={confirmModal.type}
         confirmText={confirmModal.confirmText}
         cancelText={confirmModal.cancelText}
+        onConfirm={confirmModal.handleConfirm}
+        onClose={confirmModal.close}
       />
     </>
   );
@@ -425,60 +434,76 @@ function RoleFormModal({
     },
   });
 
-  const togglePermission = (permissionId: string) => {
-    const currentPermissions = form.values.permissions;
-    const newPermissions = currentPermissions.includes(permissionId)
-      ? currentPermissions.filter((id) => id !== permissionId)
-      : [...currentPermissions, permissionId];
-
-    form.setValue("permissions", newPermissions);
+  const handlePermissionChange = (permissionId: string, checked: boolean) => {
+    const currentPermissions = form.values.permissions as string[];
+    if (checked) {
+      form.setValue("permissions", [...currentPermissions, permissionId]);
+    } else {
+      form.setValue(
+        "permissions",
+        currentPermissions.filter((id) => id !== permissionId)
+      );
+    }
   };
+
+  const groupedPermissions = permissions.reduce((acc, permission) => {
+    if (!acc[permission.resource]) {
+      acc[permission.resource] = [];
+    }
+    acc[permission.resource].push(permission);
+    return acc;
+  }, {} as Record<string, Permission[]>);
 
   return (
     <FormModal
       isOpen={isOpen}
       onClose={onClose}
-      onSubmit={form.handleSubmit}
       title={title}
+      onSubmit={form.handleSubmit}
       loading={form.isSubmitting}
       disabled={!form.isValid}
-      size="lg"
+      submitText={role ? "Actualizar Rol" : "Crear Rol"}
     >
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nombre del Rol
-          </label>
-          <input
-            type="text"
-            name={form.getFieldProps("name").name}
-            value={String(form.getFieldProps("name").value)}
-            onChange={form.getFieldProps("name").onChange}
-            onBlur={form.getFieldProps("name").onBlur}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {form.errors.name && (
-            <p className="text-red-500 text-sm mt-1">{form.errors.name}</p>
-          )}
-        </div>
+      <div className="space-y-6">
+        {/* Información básica del rol */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nombre del Rol *
+            </label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="ej: admin, editor, viewer"
+              value={form.values.name as string}
+              onChange={form.getFieldProps("name").onChange}
+              onBlur={form.getFieldProps("name").onBlur}
+              name="name"
+            />
+            {form.errors.name && (
+              <p className="text-red-500 text-sm mt-1">{form.errors.name}</p>
+            )}
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nombre para Mostrar
-          </label>
-          <input
-            type="text"
-            name={form.getFieldProps("displayName").name}
-            value={String(form.getFieldProps("displayName").value)}
-            onChange={form.getFieldProps("displayName").onChange}
-            onBlur={form.getFieldProps("displayName").onBlur}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {form.errors.displayName && (
-            <p className="text-red-500 text-sm mt-1">
-              {form.errors.displayName}
-            </p>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nombre para Mostrar *
+            </label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="ej: Administrador, Editor, Visualizador"
+              value={form.values.displayName as string}
+              onChange={form.getFieldProps("displayName").onChange}
+              onBlur={form.getFieldProps("displayName").onBlur}
+              name="displayName"
+            />
+            {form.errors.displayName && (
+              <p className="text-red-500 text-sm mt-1">
+                {form.errors.displayName}
+              </p>
+            )}
+          </div>
         </div>
 
         <div>
@@ -486,63 +511,85 @@ function RoleFormModal({
             Descripción
           </label>
           <textarea
-            name={form.getFieldProps("description").name}
-            value={String(form.getFieldProps("description").value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            rows={3}
+            placeholder="Descripción del rol y sus responsabilidades"
+            value={form.values.description as string}
             onChange={form.getFieldProps("description").onChange}
             onBlur={form.getFieldProps("description").onBlur}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows={3}
+            name="description"
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nivel de Autoridad (1-79)
+            Nivel de Autoridad *
           </label>
-          <input
-            type="number"
-            min="1"
-            max="79"
-            name={form.getFieldProps("level").name}
-            value={String(form.getFieldProps("level").value)}
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={form.values.level as number}
             onChange={form.getFieldProps("level").onChange}
             onBlur={form.getFieldProps("level").onBlur}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Niveles 80+ están reservados para administradores
-          </p>
+            name="level"
+          >
+            <option value={10}>Nivel 10 - Básico</option>
+            <option value={20}>Nivel 20 - Usuario</option>
+            <option value={30}>Nivel 30 - Colaborador</option>
+            <option value={40}>Nivel 40 - Editor</option>
+            <option value={50}>Nivel 50 - Moderador</option>
+            <option value={60}>Nivel 60 - Supervisor</option>
+            <option value={70}>Nivel 70 - Gerente</option>
+            <option value={80}>Nivel 80 - Administrador</option>
+            <option value={90}>Nivel 90 - Super Admin</option>
+            <option value={100}>Nivel 100 - Root</option>
+          </select>
           {form.errors.level && (
             <p className="text-red-500 text-sm mt-1">{form.errors.level}</p>
           )}
         </div>
 
+        {/* Permisos agrupados por recurso */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-3">
             Permisos
           </label>
-          <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
-            {permissions.map((permission) => (
-              <label
-                key={permission.id}
-                className="flex items-center space-x-2 py-1"
-              >
-                <input
-                  type="checkbox"
-                  checked={form.values.permissions.includes(permission.id)}
-                  onChange={() => togglePermission(permission.id)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-500">
-                  {permission.displayName}
-                </span>
-                <span className="text-xs text-gray-500">
-                  ({permission.resource}.{permission.action})
-                </span>
-              </label>
+          <div className="space-y-4 max-h-60 overflow-y-auto border border-gray-200 rounded-md p-4">
+            {Object.entries(groupedPermissions).map(([resource, perms]) => (
+              <div key={resource}>
+                <h4 className="font-medium text-gray-900 mb-2 capitalize">
+                  {resource === "content" ? "Contenido" : resource}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {perms.map((permission) => (
+                    <label
+                      key={permission.id}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={(form.values.permissions as string[]).includes(
+                          permission.id
+                        )}
+                        onChange={(e) =>
+                          handlePermissionChange(
+                            permission.id,
+                            e.target.checked
+                          )
+                        }
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">
+                        {permission.displayName}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
+
+
       </div>
     </FormModal>
   );

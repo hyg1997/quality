@@ -66,6 +66,14 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Convertir level a número
+    const levelNumber = parseInt(level, 10)
+    if (isNaN(levelNumber)) {
+      return NextResponse.json({ 
+        error: 'Level must be a valid number' 
+      }, { status: 400 })
+    }
+
     // Verificar que el nombre del rol no exista
     const existingRole = await prisma.role.findUnique({
       where: { name }
@@ -83,18 +91,29 @@ export async function POST(request: NextRequest) {
         name,
         displayName,
         description,
-        level
+        level: levelNumber
       }
     })
 
     // Asignar permisos si se proporcionaron
     if (permissions && permissions.length > 0) {
-      await prisma.rolePermission.createMany({
-        data: permissions.map((permissionId: string) => ({
-          roleId: role.id,
-          permissionId
-        }))
+      // Verificar que los permisos existen
+      const existingPermissions = await prisma.permission.findMany({
+        where: {
+          id: {
+            in: permissions
+          }
+        }
       })
+
+      if (existingPermissions.length > 0) {
+        await prisma.rolePermission.createMany({
+          data: existingPermissions.map((permission) => ({
+            roleId: role.id,
+            permissionId: permission.id
+          }))
+        })
+      }
     }
 
     // Crear log de auditoría
