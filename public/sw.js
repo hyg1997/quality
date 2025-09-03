@@ -1,10 +1,12 @@
-const CACHE_NAME = 'control-calidad-v1'
+const CACHE_NAME = 'control-calidad-v2'
 const urlsToCache = [
   '/',
   '/dashboard',
   '/auth/signin',
   '/manifest.json',
-  '/icons/icon.svg'
+  '/icons/icon.svg',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png'
 ]
 
 self.addEventListener('install', (event) => {
