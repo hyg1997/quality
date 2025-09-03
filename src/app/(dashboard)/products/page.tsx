@@ -550,8 +550,39 @@ function ProductFormModal({
           });
         }
       }
+      
+      // Reload product data to get updated parameters
+      await reloadProductData();
     } catch (error) {
       console.error("Error saving parameters:", error);
+    }
+  };
+
+  const reloadProductData = async () => {
+    if (!product?.id) return;
+    
+    try {
+      const response = await productService.getProduct(product.id);
+      if (response.success && response.data) {
+        // Update the parameters state with fresh data from server
+        const updatedParameters = (response.data.parameters && Array.isArray(response.data.parameters)) 
+          ? response.data.parameters.map((param: Parameter) => ({
+              id: param.id,
+              name: param.name,
+              type: param.type,
+              expectedValue: param.expectedValue || "",
+              minRange: param.minRange || 0,
+              maxRange: param.maxRange || 100,
+              unit: param.unit || "",
+              required: param.required,
+              active: param.active,
+            }))
+          : [];
+        
+        setParameters(updatedParameters);
+      }
+    } catch (error) {
+      console.error("Error reloading product data:", error);
     }
   };
 

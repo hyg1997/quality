@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
     // Build where clause
     const where: {
       OR?: Array<{
-        internalLot?: { contains: string; mode: string };
-        supplierLot?: { contains: string; mode: string };
-        observations?: { contains: string; mode: string };
-        product?: { name: { contains: string; mode: string } };
+        internalLot?: { contains: string };
+        supplierLot?: { contains: string };
+        observations?: { contains: string };
+        product?: { name: { contains: string } };
       }>;
       productId?: string;
       status?: string;
@@ -44,12 +44,12 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        { internalLot: { contains: search, mode: "insensitive" } },
-        { supplierLot: { contains: search, mode: "insensitive" } },
-        { observations: { contains: search, mode: "insensitive" } },
+        { internalLot: { contains: search } },
+        { supplierLot: { contains: search } },
+        { observations: { contains: search } },
         {
           product: {
-            name: { contains: search, mode: "insensitive" },
+            name: { contains: search },
           },
         },
       ];

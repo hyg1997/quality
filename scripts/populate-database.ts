@@ -419,15 +419,182 @@ class DatabasePopulator {
   // ============================================================================
 
   async createProducts(): Promise<void> {
-    this.log("📦 Creando productos...", "info");
+    this.log("📦 Creando productos desde CSV...", "info");
 
     try {
-      // TODO: Implementar creación de productos
-      this.log("⏳ Productos - Pendiente de implementar", "warning");
+      // Leer el archivo CSV
+      const csvPath = path.join(__dirname, "..", "PARAMETROS DE CONTROL.csv");
+      
+      if (!fs.existsSync(csvPath)) {
+        this.log("⚠️ Archivo CSV no encontrado: " + csvPath, "warning");
+        return;
+      }
+
+      const csvContent = fs.readFileSync(csvPath, "utf-8");
+      const lines = csvContent.split("\n").filter(line => line.trim());
+      
+      if (lines.length < 4) {
+        this.log("⚠️ CSV no tiene suficientes líneas de datos", "warning");
+        return;
+      }
+
+      // Obtener headers (línea 3, índice 2)
+      const headers = lines[2].split(",").map(h => h.trim());
+      
+      // Obtener master parameters existentes
+      const masterParameters = await this.prisma.masterParameter.findMany({
+        where: { active: true }
+      });
+      
+      const masterParamMap = new Map(masterParameters.map(mp => [mp.name, mp]));
+      
+      let createdProductsCount = 0;
+      let createdParametersCount = 0;
+      let skippedProductsCount = 0;
+
+      // Procesar cada línea de producto (desde línea 4 en adelante)
+      for (let i = 3; i < lines.length; i++) {
+        const values = lines[i].split(",").map(v => v.trim());
+        const productName = values[0];
+        
+        if (!productName || productName === "") continue;
+
+        // Verificar si el producto ya existe
+        const existingProduct = await this.prisma.product.findFirst({
+          where: { name: productName }
+        });
+
+        if (existingProduct) {
+          skippedProductsCount++;
+          continue;
+        }
+
+        // Crear el producto
+        const product = await this.prisma.product.create({
+          data: {
+            name: productName,
+            code: this.generateProductCode(productName),
+            description: `Producto de control: ${productName}`,
+            active: true
+          }
+        });
+
+        createdProductsCount++;
+
+        // Crear parámetros para este producto
+        for (let j = 1; j < headers.length && j < values.length; j++) {
+          const parameterName = headers[j];
+          const parameterValue = values[j];
+          
+          if (!parameterName || !parameterValue || parameterValue === "") continue;
+          
+          const masterParam = masterParamMap.get(parameterName);
+          if (!masterParam) continue;
+
+          // Parsear el valor del parámetro
+          const parsedValue = this.parseParameterValue(parameterValue, masterParam.type);
+          
+          if (parsedValue) {
+            await this.prisma.parameter.create({
+              data: {
+                productId: product.id,
+                masterParameterId: masterParam.id,
+                name: parameterName,
+                type: masterParam.type,
+                expectedValue: parsedValue.expectedValue,
+                minRange: parsedValue.minRange,
+                maxRange: parsedValue.maxRange,
+                unit: masterParam.unit,
+                required: true,
+                active: true
+              }
+            });
+            
+            createdParametersCount++;
+          }
+        }
+      }
+
+      this.log(`✅ Productos creados: ${createdProductsCount}`, "success");
+      this.log(`✅ Parámetros creados: ${createdParametersCount}`, "success");
+      this.log(`⏭️ Productos existentes omitidos: ${skippedProductsCount}`, "info");
+      
     } catch (error) {
       this.log("❌ Error creando productos: " + error, "error");
       throw error;
     }
+  }
+
+  private generateProductCode(name: string): string {
+    // Generar código basado en el nombre del producto
+    return name
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      .substring(0, 10) + "-" + Date.now().toString().slice(-4);
+  }
+
+  private parseParameterValue(value: string, type: string): {
+    expectedValue?: string;
+    minRange?: number;
+    maxRange?: number;
+  } | null {
+    if (!value || value.trim() === "") return null;
+
+    const cleanValue = value.trim();
+
+    // Detectar patrones de rango con +/-
+    // Ejemplo: "60 +/- 0.5 g" -> minRange: 59.5, maxRange: 60.5
+    const plusMinusPattern = /([0-9.]+)\s*\+\/\-\s*([0-9.]+)/;
+    const plusMinusMatch = cleanValue.match(plusMinusPattern);
+    
+    if (plusMinusMatch) {
+      const baseValue = parseFloat(plusMinusMatch[1]);
+      const tolerance = parseFloat(plusMinusMatch[2]);
+      
+      return {
+        expectedValue: baseValue.toString(),
+        minRange: baseValue - tolerance,
+        maxRange: baseValue + tolerance
+      };
+    }
+
+    // Detectar rangos explícitos
+    // Ejemplo: "17.30 - 17.50 mm" -> minRange: 17.30, maxRange: 17.50
+    const rangePattern = /([0-9.]+)\s*-\s*([0-9.]+)/;
+    const rangeMatch = cleanValue.match(rangePattern);
+    
+    if (rangeMatch) {
+      const minValue = parseFloat(rangeMatch[1]);
+      const maxValue = parseFloat(rangeMatch[2]);
+      
+      return {
+        expectedValue: ((minValue + maxValue) / 2).toString(),
+        minRange: minValue,
+        maxRange: maxValue
+      };
+    }
+
+    // Detectar valores numéricos simples
+    const numericPattern = /^([0-9.]+)$/;
+    const numericMatch = cleanValue.match(numericPattern);
+    
+    if (numericMatch) {
+      const numValue = parseFloat(numericMatch[1]);
+      
+      // Si es tipo range o numeric, usar el valor para min y max
+      if (type === "range" || type === "numeric") {
+        return {
+          expectedValue: numValue.toString(),
+          minRange: numValue,
+          maxRange: numValue
+        };
+      }
+    }
+
+    // Para valores de texto o no numéricos
+    return {
+      expectedValue: cleanValue
+    };
   }
 
   // ============================================================================

@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Trash2, ClipboardList, FileText } from "lucide-react";
+import { Trash2, ClipboardList, FileText, Eye } from "lucide-react";
 import {
   DataTable,
   FormModal,
@@ -15,6 +15,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useModal, useConfirmModal } from "@/hooks/useModal";
 import { useForm } from "@/hooks/useForm";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useDataTableSearch } from "@/hooks/useDataTableSearch";
 import { recordService, type ProductRecord } from "@/services/api/records";
 import { productService, type Product } from "@/services/api/products";
 import { controlService } from "@/services/api/controls";
@@ -34,30 +35,34 @@ export default function RecordsManagement() {
   const { data: session, status } = useSession();
   const { hasPermission } = usePermissions();
   const { success, error } = useNotifications();
-  const [records, setRecords] = useState<ProductRecord[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const createModal = useModal<ProductRecord>();
   const editModal = useModal<ProductRecord>();
   const viewModal = useModal<ProductRecord>();
   const confirmModal = useConfirmModal();
 
-  const fetchRecords = useCallback(async () => {
-    setLoading(true);
-    try {
+  // Hook para manejar búsqueda de registros
+  const {
+    data: records,
+    loading,
+    searchProps,
+    refetch: refetchRecords
+  } = useDataTableSearch<ProductRecord>({
+    fetchData: async (searchTerm?: string) => {
       const response = await recordService.getRecords({
         limit: 100,
+        search: searchTerm
       });
-      if (response.success && response.data) {
-        setRecords(response.data.records);
+      
+      if (!response.success || !response.data) {
+        throw new Error('Error fetching records');
       }
-    } catch (error) {
-      console.error("Error fetching records:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      
+      return response.data.records;
+    },
+    placeholder: "Buscar registros por lote, producto o estado..."
+  });
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -74,10 +79,9 @@ export default function RecordsManagement() {
 
   useEffect(() => {
     if (session && hasPermission("records:read")) {
-      fetchRecords();
       fetchProducts();
     }
-  }, [session, hasPermission, fetchRecords, fetchProducts]);
+  }, [session, hasPermission, fetchProducts]);
 
   const handleCreateRecord = useCallback(
     async (data: RecordFormData) => {
@@ -95,7 +99,7 @@ export default function RecordsManagement() {
 
         if (response.success && response.data) {
           createModal.close();
-          await fetchRecords();
+          await refetchRecords();
           success(
             "Registro creado",
             `El registro ${data.internalLot} ha sido creado exitosamente`
@@ -110,7 +114,7 @@ export default function RecordsManagement() {
         error("Error al crear registro", "Ha ocurrido un error inesperado");
       }
     },
-    [createModal, fetchRecords, success, error]
+    [createModal, refetchRecords, success, error]
   );
 
   const handleEditRecord = useCallback(
@@ -131,7 +135,7 @@ export default function RecordsManagement() {
 
         if (response.success && response.data) {
           editModal.close();
-          await fetchRecords();
+          await refetchRecords();
           success(
             "Registro actualizado",
             `El registro ${data.internalLot} ha sido actualizado exitosamente`
@@ -149,7 +153,7 @@ export default function RecordsManagement() {
         );
       }
     },
-    [editModal, fetchRecords, success, error]
+    [editModal, refetchRecords, success, error]
   );
 
   const handleDeleteRecord = useCallback(
@@ -172,7 +176,7 @@ export default function RecordsManagement() {
             const response = await recordService.deleteRecord(record.id);
 
             if (response.success) {
-              await fetchRecords();
+              await refetchRecords();
               success(
                 "Registro eliminado",
                 `El registro ${record.internalLot} ha sido eliminado exitosamente`
@@ -195,27 +199,27 @@ export default function RecordsManagement() {
         },
       });
     },
-    [confirmModal, fetchRecords, success, error]
+    [confirmModal, refetchRecords, success, error]
   );
 
-  const handleGeneratePDF = useCallback(
+  const generatePDFDocument = useCallback(
     async (record: ProductRecord) => {
       try {
-        // Get complete record data with controls and photos
-        const response = await controlService.getQualityControl(record.id);
+        // Parallel loading: Get data and import jsPDF simultaneously
+        const [response, jsPDF] = await Promise.all([
+          controlService.getQualityControl(record.id),
+          import("jspdf").then(module => module.default)
+        ]);
 
         if (!response.success || !response.data) {
           error(
             "Error al obtener datos",
             "No se pudieron obtener los datos del registro"
           );
-          return;
+          return null;
         }
 
         const { record: recordData, controls, photos } = response.data;
-
-        // Generate PDF using jsPDF
-        const jsPDF = (await import("jspdf")).default;
         const doc = new jsPDF();
 
         // Title
@@ -401,12 +405,13 @@ export default function RecordsManagement() {
           doc.text("Evidencia Fotográfica", 10, currentY);
           currentY += 10;
 
-          for (const photo of photos) {
+          // Process images in parallel for better performance
+          const imagePromises = photos.map(async (photo) => {
             try {
               const base64Image = `data:image/jpeg;base64,${photo.base64Data}`;
-              const img = new Image();
-
-              await new Promise<void>((resolve, reject) => {
+              
+              return new Promise<{photo: typeof photo, dimensions: {width: number, height: number}, base64: string}>((resolve, reject) => {
+                const img = new Image();
                 img.onload = () => {
                   const maxWidth = 140;
                   const maxHeight = 120;
@@ -421,30 +426,42 @@ export default function RecordsManagement() {
                     height = maxHeight;
                   }
 
-                  if (currentY + height > 280) {
-                    doc.addPage();
-                    currentY = 20;
-                  }
-
-                  doc.addImage(
-                    base64Image,
-                    "JPEG",
-                    10,
-                    currentY,
-                    width,
-                    height
-                  );
-                  currentY += height + 10;
-                  resolve();
+                  resolve({ photo, dimensions: { width, height }, base64: base64Image });
                 };
-                img.onerror = () => reject(new Error("Failed to load image"));
-                img.crossOrigin = "anonymous";
+                img.onerror = () => reject(new Error(`Failed to load image: ${photo.filename}`));
                 img.src = base64Image;
               });
             } catch (err) {
-              console.error("Error adding image to PDF:", err);
+              console.error(`Error processing image ${photo.filename}:`, err);
+              return null;
+            }
+          });
+
+          // Wait for all images to be processed
+          const processedImages = await Promise.allSettled(imagePromises);
+          
+          // Add processed images to PDF
+          for (const result of processedImages) {
+            if (result.status === 'fulfilled' && result.value) {
+              const { dimensions, base64 } = result.value;
+              
+              if (currentY + dimensions.height > 280) {
+                doc.addPage();
+                currentY = 20;
+              }
+
+              doc.addImage(
+                base64,
+                "JPEG",
+                10,
+                currentY,
+                dimensions.width,
+                dimensions.height
+              );
+              currentY += dimensions.height + 10;
+            } else if (result.status === 'rejected') {
               doc.text(
-                `Error cargando imagen: ${photo.filename}`,
+                `Error cargando imagen`,
                 10,
                 currentY
               );
@@ -455,24 +472,92 @@ export default function RecordsManagement() {
           doc.text("No se adjuntaron imágenes.", 10, currentY);
         }
 
-        // Save PDF
-        const filename = `${recordData.product?.name || "Registro"}_${new Date(
-          recordData.registrationDate
-        )
-          .toLocaleDateString()
-          .replace(/\//g, "-")}.pdf`;
+        return { doc, recordData };
+      } catch (err) {
+        console.error("Error generating PDF document:", err);
+        error("Error al generar PDF", "No se pudo generar el documento PDF");
+        return null;
+      }
+    },
+    [error]
+  );
+
+  const handlePreviewPDF = useCallback(
+    async (record: ProductRecord) => {
+      // Show loading notification
+      success(
+        "Generando vista previa...",
+        "Por favor espera mientras se genera el PDF"
+      );
+
+      try {
+        const result = await generatePDFDocument(record);
+        if (!result) return;
+
+        const { doc } = result;
+
+        // Create blob and open in new window for preview
+        const pdfBlob = doc.output('blob');
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        
+        // Open in new window for preview
+        const previewWindow = window.open(blobUrl, '_blank');
+        if (!previewWindow) {
+          error("Error de navegador", "No se pudo abrir la vista previa. Verifica que los pop-ups estén habilitados.");
+          URL.revokeObjectURL(blobUrl);
+          return;
+        }
+
+        // Clean up the blob URL after a delay
+        setTimeout(() => {
+          URL.revokeObjectURL(blobUrl);
+        }, 5000); // Increased timeout for better UX
+
+        success(
+          "Vista previa lista",
+          "El PDF se ha abierto en una nueva ventana"
+        );
+      } catch (err) {
+        console.error("Error generating PDF preview:", err);
+        error("Error al generar vista previa", "No se pudo generar la vista previa del PDF");
+      }
+    },
+    [generatePDFDocument, success, error]
+  );
+
+  const handleDownloadPDF = useCallback(
+    async (record: ProductRecord) => {
+      // Show loading notification
+      success(
+        "Generando PDF...",
+        "Por favor espera mientras se procesa el documento"
+      );
+
+      try {
+        const result = await generatePDFDocument(record);
+        if (!result) return;
+
+        const { doc, recordData } = result;
+
+        // Generate optimized filename
+        const productName = recordData.product?.name?.replace(/[^a-zA-Z0-9]/g, '_') || "Registro";
+        const date = new Date(recordData.registrationDate)
+          .toLocaleDateString('es-ES')
+          .replace(/\//g, "-");
+        const filename = `${productName}_${date}_${recordData.internalLot}.pdf`;
+        
         doc.save(filename);
 
         success(
-          "PDF generado",
-          "El PDF se ha generado y descargado exitosamente"
+          "PDF descargado",
+          `Archivo guardado como: ${filename}`
         );
       } catch (err) {
-        console.error("Error generating PDF:", err);
-        error("Error al generar PDF", "No se pudo generar el PDF del registro");
+        console.error("Error downloading PDF:", err);
+        error("Error al descargar PDF", "No se pudo descargar el PDF del registro");
       }
     },
-    [success, error]
+    [generatePDFDocument, success, error]
   );
 
   // Memoize columns definition to prevent recreation on every render
@@ -534,8 +619,14 @@ export default function RecordsManagement() {
   const actions: ActionDef<ProductRecord>[] = useMemo(
     () => [
       {
-        label: "Ver PDF",
-        onClick: handleGeneratePDF,
+        label: "Vista Previa PDF",
+        onClick: handlePreviewPDF,
+        icon: <Eye className="h-4 w-4" />,
+        variant: "secondary",
+      },
+      {
+        label: "Descargar PDF",
+        onClick: handleDownloadPDF,
         icon: <FileText className="h-4 w-4" />,
         variant: "secondary",
       },
@@ -547,7 +638,7 @@ export default function RecordsManagement() {
         hidden: () => !hasPermission("records:delete"),
       },
     ],
-    [handleDeleteRecord, handleGeneratePDF, hasPermission]
+    [handleDeleteRecord, handlePreviewPDF, handleDownloadPDF, hasPermission]
   );
 
   if (status === "loading") {
@@ -586,6 +677,7 @@ export default function RecordsManagement() {
           actions={actions}
           loading={loading}
           emptyMessage="No hay registros configurados"
+          search={searchProps}
         />
       </PageLayout>
 

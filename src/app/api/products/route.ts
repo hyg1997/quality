@@ -24,18 +24,18 @@ export async function GET(request: NextRequest) {
     // Construir filtros
     const where: {
       OR?: Array<{
-        name?: { contains: string; mode: "insensitive" };
-        description?: { contains: string; mode: "insensitive" };
-        code?: { contains: string; mode: "insensitive" };
+        name?: { contains: string };
+        description?: { contains: string };
+        code?: { contains: string };
       }>;
       active?: boolean;
     } = {};
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-        { code: { contains: search, mode: "insensitive" } },
+        { name: { contains: search } },
+        { description: { contains: search } },
+        { code: { contains: search } },
       ];
     }
 
