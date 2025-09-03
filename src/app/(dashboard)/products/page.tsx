@@ -507,10 +507,6 @@ function ProductFormModal({
         masterParameterId: selectedParam.id,
         name: selectedParam.name,
         type: selectedParam.type,
-        expectedValue: selectedParam.defaultValue || "",
-        minRange: selectedParam.minRange || 0,
-        maxRange: selectedParam.maxRange || 100,
-        unit: selectedParam.unit || "",
         required: true,
         active: selectedParam.active,
       };

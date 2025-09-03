@@ -1,8 +1,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { Plus, Edit, Trash2, Package, Settings } from "lucide-react";
+import { useMemo, useCallback } from "react";
+import { Plus, Edit, Trash2, Package, Eye } from "lucide-react";
 import {
   DataTable,
   FormModal,
@@ -15,6 +15,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useModal, useConfirmModal } from "@/hooks/useModal";
 import { useForm } from "@/hooks/useForm";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useDataTableSearch } from "@/hooks/useDataTableSearch";
 import {
   masterParameterService,
   type MasterParameter,
@@ -35,36 +36,32 @@ export default function MasterParametersManagement() {
   const { data: session, status } = useSession();
   const { hasPermission } = usePermissions();
   const { success, error } = useNotifications();
-  const [masterParameters, setMasterParameters] = useState<MasterParameter[]>(
-    []
-  );
-  const [loading, setLoading] = useState(true);
 
   const createModal = useModal<MasterParameter>();
   const editModal = useModal<MasterParameter>();
   const confirmModal = useConfirmModal();
 
-  const fetchMasterParameters = useCallback(async () => {
-    setLoading(true);
-    try {
+  // Hook para manejar búsqueda de parámetros maestros
+  const {
+    data: masterParameters,
+    loading,
+    searchProps,
+    refetch: refetchMasterParameters,
+  } = useDataTableSearch<MasterParameter>({
+    fetchData: async (searchTerm?: string) => {
       const response = await masterParameterService.getMasterParameters({
         limit: 100,
+        search: searchTerm,
       });
-      if (response.success && response.data) {
-        setMasterParameters(response.data.masterParameters);
-      }
-    } catch (error) {
-      console.error("Error fetching master parameters:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
-  useEffect(() => {
-    if (session && hasPermission("content:read")) {
-      fetchMasterParameters();
-    }
-  }, [session, hasPermission, fetchMasterParameters]);
+      if (!response.success || !response.data) {
+        throw new Error("Error fetching master parameters");
+      }
+
+      return response.data.masterParameters;
+    },
+    placeholder: "Buscar parámetros por nombre, descripción o tipo...",
+  });
 
   const handleCreateMasterParameter = useCallback(
     async (data: MasterParameterFormData) => {
@@ -73,16 +70,12 @@ export default function MasterParametersManagement() {
           name: data.name,
           description: data.description,
           type: data.type,
-          defaultValue: data.defaultValue,
-          minRange: data.minRange,
-          maxRange: data.maxRange,
-          unit: data.unit,
           active: data.active,
         });
 
         if (response.success && response.data) {
           createModal.close();
-          await fetchMasterParameters();
+          await refetchMasterParameters();
           success(
             "Parámetro maestro creado",
             `El parámetro maestro ${data.name} ha sido creado exitosamente`
@@ -100,7 +93,7 @@ export default function MasterParametersManagement() {
         );
       }
     },
-    [createModal, fetchMasterParameters, success, error]
+    [createModal, refetchMasterParameters, success, error]
   );
 
   const handleEditMasterParameter = useCallback(
@@ -114,17 +107,13 @@ export default function MasterParametersManagement() {
             name: data.name,
             description: data.description,
             type: data.type,
-            defaultValue: data.defaultValue,
-            minRange: data.minRange,
-            maxRange: data.maxRange,
-            unit: data.unit,
             active: data.active,
           }
         );
 
         if (response.success && response.data) {
           editModal.close();
-          await fetchMasterParameters();
+          await refetchMasterParameters();
           success(
             "Parámetro maestro actualizado",
             `El parámetro maestro ${data.name} ha sido actualizado exitosamente`
@@ -142,7 +131,7 @@ export default function MasterParametersManagement() {
         );
       }
     },
-    [editModal, fetchMasterParameters, success, error]
+    [editModal, refetchMasterParameters, success, error]
   );
 
   const handleDeleteMasterParameter = useCallback(
@@ -159,7 +148,7 @@ export default function MasterParametersManagement() {
             );
 
             if (response.success) {
-              await fetchMasterParameters();
+              await refetchMasterParameters();
               success(
                 "Parámetro maestro eliminado",
                 `El parámetro maestro ${masterParameter.name} ha sido eliminado exitosamente`
@@ -179,7 +168,7 @@ export default function MasterParametersManagement() {
         },
       });
     },
-    [confirmModal, fetchMasterParameters, success, error]
+    [confirmModal, refetchMasterParameters, success, error]
   );
 
   const handleToggleStatus = useCallback(
@@ -192,7 +181,7 @@ export default function MasterParametersManagement() {
           );
 
         if (response.success && response.data) {
-          await fetchMasterParameters();
+          await refetchMasterParameters();
           const statusText = !masterParameter.active
             ? "activado"
             : "desactivado";
@@ -211,7 +200,7 @@ export default function MasterParametersManagement() {
         error("Error al cambiar estado", "Ha ocurrido un error inesperado");
       }
     },
-    [fetchMasterParameters, success, error]
+    [refetchMasterParameters, success, error]
   );
 
   // Memoize columns definition to prevent recreation on every render
@@ -250,28 +239,6 @@ export default function MasterParametersManagement() {
         },
       },
       {
-        key: "defaultValue",
-        header: "Valor por Defecto",
-        cell: (masterParameter) => (
-          <div className="text-sm">
-            {masterParameter.type === "range" &&
-            masterParameter.minRange !== undefined &&
-            masterParameter.maxRange !== undefined
-              ? `${masterParameter.minRange} - ${masterParameter.maxRange}${
-                  masterParameter.unit ? ` ${masterParameter.unit}` : ""
-                }`
-              : masterParameter.defaultValue || "-"}
-          </div>
-        ),
-      },
-      {
-        key: "unit",
-        header: "Unidad",
-        cell: (masterParameter) => (
-          <div className="text-sm">{masterParameter.unit || "-"}</div>
-        ),
-      },
-      {
         key: "active",
         header: "Estado",
         cell: (masterParameter) => (
@@ -306,7 +273,7 @@ export default function MasterParametersManagement() {
       {
         label: "Cambiar Estado",
         onClick: handleToggleStatus,
-        icon: <Settings className="h-4 w-4" />,
+        icon: <Eye className="h-4 w-4" />,
         variant: "secondary",
         hidden: () => !hasPermission("content:update"),
       },
@@ -370,6 +337,7 @@ export default function MasterParametersManagement() {
           actions={actions}
           loading={loading}
           emptyMessage="No hay parámetros maestros configurados"
+          search={searchProps}
         />
       </PageLayout>
 
@@ -414,10 +382,6 @@ function MasterParameterFormModal({
       name: masterParameter?.name || "",
       description: masterParameter?.description || "",
       type: masterParameter?.type || "text",
-      defaultValue: masterParameter?.defaultValue || "",
-      minRange: masterParameter?.minRange || undefined,
-      maxRange: masterParameter?.maxRange || undefined,
-      unit: masterParameter?.unit || "",
       active: masterParameter?.active ?? true,
     },
     validationRules: {
@@ -428,8 +392,6 @@ function MasterParameterFormModal({
       await onSubmit(data);
     },
   });
-
-  const selectedType = form.values.type as "range" | "text" | "numeric";
 
   return (
     <FormModal
@@ -496,69 +458,6 @@ function MasterParameterFormModal({
             rows={3}
           />
         </div>
-
-        {selectedType === "range" ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Valor Mínimo
-              </label>
-              <input
-                type="number"
-                name={form.getFieldProps("minRange").name}
-                value={(form.getFieldProps("minRange").value as number) || ""}
-                onChange={form.getFieldProps("minRange").onChange}
-                onBlur={form.getFieldProps("minRange").onBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Valor Máximo
-              </label>
-              <input
-                type="number"
-                name={form.getFieldProps("maxRange").name}
-                value={(form.getFieldProps("maxRange").value as number) || ""}
-                onChange={form.getFieldProps("maxRange").onChange}
-                onBlur={form.getFieldProps("maxRange").onBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Unidad
-              </label>
-              <input
-                type="text"
-                name={form.getFieldProps("unit").name}
-                value={String(form.getFieldProps("unit").value)}
-                onChange={form.getFieldProps("unit").onChange}
-                onBlur={form.getFieldProps("unit").onBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="kg, cm, etc."
-              />
-            </div>
-          </div>
-        ) : (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Valor por Defecto
-            </label>
-            <input
-              type={selectedType === "numeric" ? "number" : "text"}
-              name={form.getFieldProps("defaultValue").name}
-              value={String(form.getFieldProps("defaultValue").value)}
-              onChange={form.getFieldProps("defaultValue").onChange}
-              onBlur={form.getFieldProps("defaultValue").onBlur}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Valor por defecto del parámetro"
-            />
-          </div>
-        )}
-
         <div className="flex items-center space-x-6">
           <label className="flex items-center space-x-2">
             <input

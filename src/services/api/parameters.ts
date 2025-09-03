@@ -60,9 +60,7 @@ export class ParameterService {
   /**
    * Get all parameters with pagination and filters
    */
-  async getParameters(
-    params?: ParametersQueryParams
-  ): Promise<
+  async getParameters(params?: ParametersQueryParams): Promise<
     ApiResponse<{
       parameters: Parameter[];
       total: number;
@@ -96,8 +94,20 @@ export class ParameterService {
    */
   async getParametersByProduct(
     productId: string
-  ): Promise<ApiResponse<{ parameters: Parameter[], total: number, page: number, limit: number }>> {
-    return apiClient.get<{ parameters: Parameter[], total: number, page: number, limit: number }>(`/api/parameters?productId=${productId}&limit=1000`);
+  ): Promise<
+    ApiResponse<{
+      parameters: Parameter[];
+      total: number;
+      page: number;
+      limit: number;
+    }>
+  > {
+    return apiClient.get<{
+      parameters: Parameter[];
+      total: number;
+      page: number;
+      limit: number;
+    }>(`/api/parameters?productId=${productId}&limit=1000`);
   }
 
   /**

@@ -6,10 +6,6 @@ export interface MasterParameter extends Record<string, unknown> {
   name: string;
   description?: string;
   type: "range" | "text" | "numeric";
-  defaultValue?: string;
-  minRange?: number;
-  maxRange?: number;
-  unit?: string;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -19,10 +15,6 @@ export interface CreateMasterParameterData {
   name: string;
   description?: string;
   type: "range" | "text" | "numeric";
-  defaultValue?: string;
-  minRange?: number;
-  maxRange?: number;
-  unit?: string;
   active?: boolean;
 }
 
@@ -30,10 +22,6 @@ export interface UpdateMasterParameterData {
   name?: string;
   description?: string;
   type?: "range" | "text" | "numeric";
-  defaultValue?: string;
-  minRange?: number;
-  maxRange?: number;
-  unit?: string;
   active?: boolean;
 }
 

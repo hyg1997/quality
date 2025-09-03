@@ -3,6 +3,8 @@ import { PrismaLibSQL } from "@prisma/adapter-libsql";
 import { createClient } from "@libsql/client";
 import bcrypt from "bcryptjs";
 import { config } from "dotenv";
+import * as fs from "fs";
+import * as path from "path";
 
 // Cargar variables de entorno
 config();
@@ -433,11 +435,92 @@ class DatabasePopulator {
   // ============================================================================
 
   async createMasterParameters(): Promise<void> {
-    this.log("⚙️ Creando parámetros maestros...", "info");
+    this.log("⚙️ Creando parámetros maestros desde CSV...", "info");
 
     try {
-      // TODO: Implementar creación de parámetros maestros
-      this.log("⏳ Parámetros maestros - Pendiente de implementar", "warning");
+      // Leer el archivo CSV
+      const csvPath = path.join(__dirname, "..", "PARAMETROS DE CONTROL.csv");
+      
+      if (!fs.existsSync(csvPath)) {
+        this.log("⚠️ Archivo CSV no encontrado: " + csvPath, "warning");
+        return;
+      }
+
+      const csvContent = fs.readFileSync(csvPath, "utf-8");
+      const lines = csvContent.split("\n").filter(line => line.trim());
+      
+      // Obtener headers (línea 3, índice 2)
+      if (lines.length < 3) {
+        this.log("⚠️ CSV no tiene suficientes líneas", "warning");
+        return;
+      }
+
+      const headers = lines[2].split(",").map(h => h.trim());
+      this.log(`📋 Headers encontrados: ${headers.length} columnas`, "info");
+
+      // Extraer parámetros únicos de los headers (excluyendo PRODUCTO)
+      const parameterNames = headers.slice(1).filter(name => name && name !== "PRODUCTO");
+      
+      let createdCount = 0;
+      let skippedCount = 0;
+
+      for (const paramName of parameterNames) {
+        if (!paramName || paramName.trim() === "") continue;
+
+        // Verificar si ya existe
+        const existing = await this.prisma.masterParameter.findFirst({
+          where: { name: paramName }
+        });
+
+        if (existing) {
+          skippedCount++;
+          continue;
+        }
+
+        // Determinar tipo basado en el nombre del parámetro
+        let type: "range" | "text" | "numeric" = "text";
+        let unit: string | undefined;
+        
+        const lowerName = paramName.toLowerCase();
+        
+        if (lowerName.includes("peso") || lowerName.includes("gramaje") || 
+            lowerName.includes("altura") || lowerName.includes("ancho") || 
+            lowerName.includes("largo") || lowerName.includes("diámetro") ||
+            lowerName.includes("capacidad") || lowerName.includes("calibre")) {
+          type = "range";
+          
+          // Asignar unidades comunes
+          if (lowerName.includes("peso")) unit = "g";
+          else if (lowerName.includes("gramaje")) unit = "g/m²";
+          else if (lowerName.includes("altura") || lowerName.includes("ancho") || 
+                   lowerName.includes("largo") || lowerName.includes("diámetro")) unit = "mm";
+          else if (lowerName.includes("capacidad")) unit = "ml";
+          else if (lowerName.includes("calibre")) unit = "mm";
+        } else if (lowerName.includes("ph") || lowerName.includes("brix") || 
+                   lowerName.includes("refracción") || lowerName.includes("puentes")) {
+          type = "numeric";
+          
+          if (lowerName.includes("brix")) unit = "°Brix";
+          else if (lowerName.includes("refracción")) unit = "nD";
+        }
+
+        // Crear el parámetro maestro
+        await this.prisma.masterParameter.create({
+          data: {
+            name: paramName,
+            description: `Parámetro de control: ${paramName}`,
+            type: type,
+            unit: unit,
+            active: true
+          }
+        });
+
+        createdCount++;
+      }
+
+      this.log(`✅ Parámetros maestros creados: ${createdCount}`, "success");
+      this.log(`⏭️ Parámetros existentes omitidos: ${skippedCount}`, "info");
+      
     } catch (error) {
       this.log("❌ Error creando parámetros maestros: " + error, "error");
       throw error;
