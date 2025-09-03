@@ -1,54 +1,59 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useActionState } from "react"
+import Link from "next/link";
+import { useActionState } from "react";
 
 type ForgotPasswordState = {
-  error?: string
-  success?: boolean
-  message?: string
-} | null
+  error?: string;
+  success?: boolean;
+  message?: string;
+} | null;
 
-// Server Action para manejar la solicitud de recuperación
-async function handleForgotPassword(prevState: ForgotPasswordState, formData: FormData): Promise<ForgotPasswordState> {
-  const email = formData.get("email") as string
+async function handleForgotPassword(
+  prevState: ForgotPasswordState,
+  formData: FormData
+): Promise<ForgotPasswordState> {
+  const email = formData.get("email") as string;
 
   if (!email) {
-    return { error: "El email es requerido" }
+    return { error: "El email es requerido" };
   }
 
-  // Validar formato de email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    return { error: "Formato de email inválido" }
+    return { error: "Formato de email inválido" };
   }
 
   try {
-    const response = await fetch('/api/auth/forgot-password', {
-      method: 'POST',
+    const response = await fetch("/api/auth/forgot-password", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ email }),
-    })
+    });
 
-    const data = await response.json()
+    const data = await response.json();
 
     if (response.ok) {
-      return { 
-        success: true, 
-        message: "Si el email existe en nuestro sistema, recibirás un enlace de recuperación en tu bandeja de entrada." 
-      }
+      return {
+        success: true,
+        message:
+          "Si el email existe en nuestro sistema, recibirás un enlace de recuperación en tu bandeja de entrada.",
+      };
     } else {
-      return { error: data.error || "Error al procesar la solicitud" }
+      return { error: data.error || "Error al procesar la solicitud" };
     }
   } catch {
-    return { error: "Error de conexión. Inténtalo de nuevo." }
+    return { error: "Error de conexión. Inténtalo de nuevo." };
   }
 }
 
 export default function ForgotPassword() {
-  const [state, formAction, isPending] = useActionState(handleForgotPassword, null)
+  const [state, formAction, isPending] = useActionState(
+    handleForgotPassword,
+    null
+  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -61,13 +66,21 @@ export default function ForgotPassword() {
             Ingresa tu email para recibir un enlace de recuperación
           </p>
         </div>
-        
+
         {state?.success ? (
           <div className="rounded-md bg-green-50 p-4">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5 text-green-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
               <div className="ml-3">
@@ -91,7 +104,10 @@ export default function ForgotPassword() {
         ) : (
           <form className="mt-8 space-y-6" action={formAction}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Dirección de Email
               </label>
               <input
@@ -141,5 +157,5 @@ export default function ForgotPassword() {
         )}
       </div>
     </div>
-  )
+  );
 }

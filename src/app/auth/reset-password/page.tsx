@@ -1,108 +1,113 @@
-"use client"
+"use client";
 
-import { useState, useEffect, Suspense } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
-import Link from "next/link"
-import { useActionState } from "react"
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useActionState } from "react";
 
 type ResetPasswordState = {
-  error?: string
-  success?: boolean
-  message?: string
-} | null
+  error?: string;
+  success?: boolean;
+  message?: string;
+} | null;
 
-// Server Action para manejar el restablecimiento de contraseña
-async function handleResetPassword(prevState: ResetPasswordState, formData: FormData): Promise<ResetPasswordState> {
-  const token = formData.get("token") as string
-  const password = formData.get("password") as string
-  const confirmPassword = formData.get("confirmPassword") as string
+async function handleResetPassword(
+  prevState: ResetPasswordState,
+  formData: FormData
+): Promise<ResetPasswordState> {
+  const token = formData.get("token") as string;
+  const password = formData.get("password") as string;
+  const confirmPassword = formData.get("confirmPassword") as string;
 
   if (!token || !password || !confirmPassword) {
-    return { error: "Todos los campos son requeridos" }
+    return { error: "Todos los campos son requeridos" };
   }
 
   if (password !== confirmPassword) {
-    return { error: "Las contraseñas no coinciden" }
+    return { error: "Las contraseñas no coinciden" };
   }
 
   if (password.length < 8) {
-    return { error: "La contraseña debe tener al menos 8 caracteres" }
+    return { error: "La contraseña debe tener al menos 8 caracteres" };
   }
 
   try {
-    const response = await fetch('/api/auth/reset-password', {
-      method: 'POST',
+    const response = await fetch("/api/auth/reset-password", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ token, password }),
-    })
+    });
 
-    const data = await response.json()
+    const data = await response.json();
 
     if (response.ok) {
-      return { 
-        success: true, 
-        message: "Tu contraseña ha sido restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña." 
-      }
+      return {
+        success: true,
+        message:
+          "Tu contraseña ha sido restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.",
+      };
     } else {
-      return { error: data.error || "Error al restablecer la contraseña" }
+      return { error: data.error || "Error al restablecer la contraseña" };
     }
   } catch {
-    return { error: "Error de conexión. Inténtalo de nuevo." }
+    return { error: "Error de conexión. Inténtalo de nuevo." };
   }
 }
 
 function ResetPasswordForm() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const [state, formAction, isPending] = useActionState(handleResetPassword, null)
-  const [token, setToken] = useState<string | null>(null)
-  const [tokenValid, setTokenValid] = useState<boolean | null>(null)
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [state, formAction, isPending] = useActionState(
+    handleResetPassword,
+    null
+  );
+  const [token, setToken] = useState<string | null>(null);
+  const [tokenValid, setTokenValid] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const tokenParam = searchParams.get('token')
+    const tokenParam = searchParams.get("token");
     if (tokenParam) {
-      setToken(tokenParam)
-      // Verificar si el token es válido
-      verifyToken(tokenParam)
+      setToken(tokenParam);
+
+      verifyToken(tokenParam);
     } else {
-      setTokenValid(false)
+      setTokenValid(false);
     }
-  }, [searchParams])
+  }, [searchParams]);
 
   const verifyToken = async (tokenToVerify: string) => {
     try {
-      const response = await fetch('/api/auth/verify-reset-token', {
-        method: 'POST',
+      const response = await fetch("/api/auth/verify-reset-token", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ token: tokenToVerify }),
-      })
+      });
 
-      setTokenValid(response.ok)
+      setTokenValid(response.ok);
     } catch {
-      setTokenValid(false)
+      setTokenValid(false);
     }
-  }
+  };
 
-  // Redirigir al login si el restablecimiento fue exitoso
   useEffect(() => {
     if (state?.success) {
       const timer = setTimeout(() => {
-        router.push('/auth/signin')
-      }, 3000)
-      return () => clearTimeout(timer)
+        router.push("/auth/signin");
+      }, 3000);
+      return () => clearTimeout(timer);
     }
-  }, [state?.success, router])
+  }, [state?.success, router]);
 
   if (tokenValid === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
       </div>
-    )
+    );
   }
 
   if (tokenValid === false) {
@@ -127,7 +132,7 @@ function ResetPasswordForm() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -141,13 +146,21 @@ function ResetPasswordForm() {
             Ingresa tu nueva contraseña
           </p>
         </div>
-        
+
         {state?.success ? (
           <div className="rounded-md bg-green-50 p-4">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5 text-green-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
               <div className="ml-3">
@@ -156,7 +169,9 @@ function ResetPasswordForm() {
                 </h3>
                 <div className="mt-2 text-sm text-green-700">
                   <p>{state.message}</p>
-                  <p className="mt-2">Serás redirigido al login en unos segundos...</p>
+                  <p className="mt-2">
+                    Serás redirigido al login en unos segundos...
+                  </p>
                 </div>
                 <div className="mt-4">
                   <Link
@@ -171,11 +186,14 @@ function ResetPasswordForm() {
           </div>
         ) : (
           <form className="mt-8 space-y-6" action={formAction}>
-            <input type="hidden" name="token" value={token || ''} />
-            
+            <input type="hidden" name="token" value={token || ""} />
+
             <div className="space-y-4">
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Nueva Contraseña
                 </label>
                 <input
@@ -190,9 +208,12 @@ function ResetPasswordForm() {
                   disabled={isPending}
                 />
               </div>
-              
+
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Confirmar Nueva Contraseña
                 </label>
                 <input
@@ -244,17 +265,19 @@ function ResetPasswordForm() {
         )}
       </div>
     </div>
-  )
+  );
 }
 
 export default function ResetPassword() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+        </div>
+      }
+    >
       <ResetPasswordForm />
     </Suspense>
-  )
+  );
 }

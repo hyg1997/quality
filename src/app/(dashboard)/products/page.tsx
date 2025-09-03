@@ -53,7 +53,6 @@ export default function ProductsManagement() {
   const editModal = useModal<Product>();
   const confirmModal = useConfirmModal();
 
-  // Hook para manejar búsqueda de productos
   const {
     data: products,
     loading,
@@ -192,7 +191,6 @@ export default function ProductsManagement() {
     [refetchProducts, success, error]
   );
 
-  // Memoize columns definition to prevent recreation on every render
   const columns: ColumnDef<Product>[] = useMemo(
     () => [
       {
@@ -245,7 +243,6 @@ export default function ProductsManagement() {
     []
   );
 
-  // Memoize actions definition to prevent recreation on every render
   const actions = useMemo(
     () =>
       [
@@ -367,7 +364,6 @@ export default function ProductsManagement() {
   );
 }
 
-// Componente del formulario de producto
 interface ProductFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -409,26 +405,21 @@ function ProductFormModal({
 
   const loadAvailableParameters = useCallback(async () => {
     try {
-      // Get master parameters from the master_parameters table
       const response = await masterParameterService.getMasterParameters({
         limit: 1000,
-        active: true, // Only get active master parameters
+        active: true,
       });
       if (response.success && response.data && response.data.masterParameters) {
-        // Get masterParameterIds that are already used in the current product
         const usedMasterParameterIds = parameters
           .map((p) => p.masterParameterId)
-          .filter(Boolean); // Remove undefined/null values
+          .filter(Boolean);
 
-        // Filter out master parameters that are already assigned to this product
         const availableMasterParameters = response.data.masterParameters.filter(
           (masterParam) => !usedMasterParameterIds.includes(masterParam.id)
         );
 
-        // Remove duplicates from available master parameters
         const uniqueParameters = availableMasterParameters.reduce(
           (acc: MasterParameter[], param) => {
-            // Check if parameter is not already in the accumulator
             if (!acc.find((p) => p.id === param.id)) {
               acc.push(param);
             }
@@ -444,7 +435,6 @@ function ProductFormModal({
     }
   }, [parameters]);
 
-  // Load parameters from product data when editing
   useEffect(() => {
     if (product?.parameters && Array.isArray(product.parameters) && isOpen) {
       const parameterData = product.parameters.map((param: Parameter) => ({
@@ -464,7 +454,6 @@ function ProductFormModal({
     }
   }, [product?.parameters, isOpen, product?.id]);
 
-  // Load all available parameters for selection
   useEffect(() => {
     if (isOpen && product?.id) {
       loadAvailableParameters();
@@ -511,7 +500,7 @@ function ProductFormModal({
         active: selectedParam.active,
       };
       setParameters(updatedParameters);
-      // Refresh available parameters to exclude the newly selected one
+
       loadAvailableParameters();
     }
   };
@@ -520,10 +509,8 @@ function ProductFormModal({
     if (!product?.id) return;
 
     try {
-      // Save or update each parameter
       for (const param of parameters) {
         if (param.id) {
-          // Update existing parameter
           await parameterService.updateParameter(param.id, {
             name: param.name,
             type: param.type,
@@ -535,7 +522,6 @@ function ProductFormModal({
             active: param.active,
           });
         } else {
-          // Create new parameter
           await parameterService.createParameter({
             productId: product.id,
             masterParameterId: param.masterParameterId,
@@ -550,8 +536,7 @@ function ProductFormModal({
           });
         }
       }
-      
-      // Reload product data to get updated parameters
+
       await reloadProductData();
     } catch (error) {
       console.error("Error saving parameters:", error);
@@ -560,25 +545,25 @@ function ProductFormModal({
 
   const reloadProductData = async () => {
     if (!product?.id) return;
-    
+
     try {
       const response = await productService.getProduct(product.id);
       if (response.success && response.data) {
-        // Update the parameters state with fresh data from server
-        const updatedParameters = (response.data.parameters && Array.isArray(response.data.parameters)) 
-          ? response.data.parameters.map((param: Parameter) => ({
-              id: param.id,
-              name: param.name,
-              type: param.type,
-              expectedValue: param.expectedValue || "",
-              minRange: param.minRange || 0,
-              maxRange: param.maxRange || 100,
-              unit: param.unit || "",
-              required: param.required,
-              active: param.active,
-            }))
-          : [];
-        
+        const updatedParameters =
+          response.data.parameters && Array.isArray(response.data.parameters)
+            ? response.data.parameters.map((param: Parameter) => ({
+                id: param.id,
+                name: param.name,
+                type: param.type,
+                expectedValue: param.expectedValue || "",
+                minRange: param.minRange || 0,
+                maxRange: param.maxRange || 100,
+                unit: param.unit || "",
+                required: param.required,
+                active: param.active,
+              }))
+            : [];
+
         setParameters(updatedParameters);
       }
     } catch (error) {

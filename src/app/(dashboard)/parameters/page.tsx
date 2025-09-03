@@ -41,7 +41,6 @@ export default function MasterParametersManagement() {
   const editModal = useModal<MasterParameter>();
   const confirmModal = useConfirmModal();
 
-  // Hook para manejar búsqueda de parámetros maestros
   const {
     data: masterParameters,
     loading,
@@ -203,7 +202,6 @@ export default function MasterParametersManagement() {
     [refetchMasterParameters, success, error]
   );
 
-  // Memoize columns definition to prevent recreation on every render
   const columns: ColumnDef<MasterParameter>[] = useMemo(
     () => [
       {
@@ -260,7 +258,6 @@ export default function MasterParametersManagement() {
     []
   );
 
-  // Memoize actions definition to prevent recreation on every render
   const actions: ActionDef<MasterParameter>[] = useMemo(
     () => [
       {
@@ -361,7 +358,6 @@ export default function MasterParametersManagement() {
   );
 }
 
-// Componente Modal para Crear/Editar Parámetros Maestros
 interface MasterParameterFormModalProps {
   isOpen: boolean;
   onClose: () => void;

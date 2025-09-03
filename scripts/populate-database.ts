@@ -6,10 +6,8 @@ import { config } from "dotenv";
 import * as fs from "fs";
 import * as path from "path";
 
-// Cargar variables de entorno
 config();
 
-// Configurar cliente Turso
 createClient({
   url: process.env.TURSO_DATABASE_URL!,
   authToken: process.env.TURSO_AUTH_TOKEN!,
@@ -24,12 +22,7 @@ const prisma = new PrismaClient({
   adapter,
 });
 
-// ============================================================================
-// DEFINICIÓN DE PERMISOS DEL SISTEMA
-// ============================================================================
-
 const SYSTEM_PERMISSIONS = [
-  // Usuarios
   {
     name: "users:create",
     displayName: "Crear Usuarios",
@@ -55,7 +48,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
   },
 
-  // Roles
   {
     name: "roles:create",
     displayName: "Crear Roles",
@@ -81,7 +73,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
   },
 
-  // Permisos
   {
     name: "permissions:read",
     displayName: "Leer Permisos",
@@ -95,7 +86,6 @@ const SYSTEM_PERMISSIONS = [
     action: "assign",
   },
 
-  // Dashboard
   {
     name: "dashboard:read",
     displayName: "Ver Dashboard",
@@ -103,7 +93,6 @@ const SYSTEM_PERMISSIONS = [
     action: "read",
   },
 
-  // Analytics
   {
     name: "analytics:read",
     displayName: "Ver Analytics",
@@ -117,7 +106,6 @@ const SYSTEM_PERMISSIONS = [
     action: "export",
   },
 
-  // Sistema
   {
     name: "system:settings",
     displayName: "Configuración del Sistema",
@@ -137,7 +125,6 @@ const SYSTEM_PERMISSIONS = [
     action: "audit",
   },
 
-  // Contenido (Productos, Registros, etc.)
   {
     name: "content:create",
     displayName: "Crear Contenido",
@@ -170,10 +157,6 @@ const SYSTEM_PERMISSIONS = [
   },
 ];
 
-// ============================================================================
-// UTILIDADES GENERALES
-// ============================================================================
-
 class DatabasePopulator {
   private prisma: PrismaClient;
 
@@ -181,22 +164,20 @@ class DatabasePopulator {
     this.prisma = prismaClient;
   }
 
-  // Método para logging con colores
   private log(
     message: string,
     type: "info" | "success" | "warning" | "error" = "info"
   ) {
     const colors = {
-      info: "\x1b[36m", // Cyan
-      success: "\x1b[32m", // Green
-      warning: "\x1b[33m", // Yellow
-      error: "\x1b[31m", // Red
+      info: "\x1b[36m",
+      success: "\x1b[32m",
+      warning: "\x1b[33m",
+      error: "\x1b[31m",
     };
     const reset = "\x1b[0m";
     console.log(`${colors[type]}${message}${reset}`);
   }
 
-  // Verificar conexión a la base de datos
   async checkConnection(): Promise<boolean> {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
@@ -208,10 +189,6 @@ class DatabasePopulator {
     }
   }
 
-  // ============================================================================
-  // USUARIOS
-  // ============================================================================
-
   async createAdminUser(): Promise<string> {
     this.log("👤 Creando usuario administrador...", "info");
 
@@ -219,7 +196,6 @@ class DatabasePopulator {
       const password = "admin123";
       const hashedPassword = await bcrypt.hash(password, 12);
 
-      // Verificar si ya existe
       let existingUser = await this.prisma.user.findFirst({
         where: {
           OR: [{ email: "admin@sistema.com" }, { username: "admin" }],
@@ -260,7 +236,6 @@ class DatabasePopulator {
         );
       }
 
-      // Verificar hash
       const isValid = await bcrypt.compare(password, hashedPassword);
       this.log(
         `🔍 Verificación del hash: ${isValid ? "✅ Correcto" : "❌ Error"}`,
@@ -274,21 +249,15 @@ class DatabasePopulator {
     }
   }
 
-  // ============================================================================
-  // ROLES Y PERMISOS
-  // ============================================================================
-
   async createRolesAndPermissions(): Promise<{ adminRoleId: string }> {
     this.log("🎭 Creando roles y permisos...", "info");
 
     try {
-      // 1. Crear todos los permisos
       this.log("📋 Creando permisos del sistema...", "info");
 
       const createdPermissions = [];
 
       for (const permissionData of SYSTEM_PERMISSIONS) {
-        // Verificar si el permiso ya existe
         let permission = await this.prisma.permission.findUnique({
           where: { name: permissionData.name },
         });
@@ -314,7 +283,6 @@ class DatabasePopulator {
 
       this.log(`📋 Total permisos: ${createdPermissions.length}`, "info");
 
-      // 2. Crear rol de Super Administrador
       this.log("👑 Creando rol Super Administrador...", "info");
 
       let adminRole = await this.prisma.role.findUnique({
@@ -338,7 +306,6 @@ class DatabasePopulator {
           "success"
         );
       } else {
-        // Actualizar el nivel si es necesario
         if (adminRole.level !== 100) {
           adminRole = await this.prisma.role.update({
             where: { id: adminRole.id },
@@ -348,15 +315,12 @@ class DatabasePopulator {
         this.log("⚠️  Rol Super Admin ya existe", "warning");
       }
 
-      // 3. Asignar TODOS los permisos al rol admin
       this.log("🔗 Asignando permisos al rol Super Admin...", "info");
 
-      // Eliminar permisos existentes del rol
       await this.prisma.rolePermission.deleteMany({
         where: { roleId: adminRole.id },
       });
 
-      // Crear nuevas asignaciones de permisos
       const rolePermissions = createdPermissions.map((permission) => ({
         roleId: adminRole.id,
         permissionId: permission.id,
@@ -378,15 +342,10 @@ class DatabasePopulator {
     }
   }
 
-  // ============================================================================
-  // ASIGNAR ROL AL USUARIO
-  // ============================================================================
-
   async assignAdminRoleToUser(userId: string, roleId: string): Promise<void> {
     this.log("🔗 Asignando rol Super Admin al usuario...", "info");
 
     try {
-      // Verificar si ya tiene el rol asignado
       const existingUserRole = await this.prisma.userRole.findUnique({
         where: {
           userId_roleId: {
@@ -414,54 +373,47 @@ class DatabasePopulator {
     }
   }
 
-  // ============================================================================
-  // PRODUCTOS
-  // ============================================================================
-
   async createProducts(): Promise<void> {
     this.log("📦 Creando productos desde CSV...", "info");
 
     try {
-      // Leer el archivo CSV
       const csvPath = path.join(__dirname, "..", "PARAMETROS DE CONTROL.csv");
-      
+
       if (!fs.existsSync(csvPath)) {
         this.log("⚠️ Archivo CSV no encontrado: " + csvPath, "warning");
         return;
       }
 
       const csvContent = fs.readFileSync(csvPath, "utf-8");
-      const lines = csvContent.split("\n").filter(line => line.trim());
-      
+      const lines = csvContent.split("\n").filter((line) => line.trim());
+
       if (lines.length < 4) {
         this.log("⚠️ CSV no tiene suficientes líneas de datos", "warning");
         return;
       }
 
-      // Obtener headers (línea 3, índice 2)
-      const headers = lines[2].split(",").map(h => h.trim());
-      
-      // Obtener master parameters existentes
+      const headers = lines[2].split(",").map((h) => h.trim());
+
       const masterParameters = await this.prisma.masterParameter.findMany({
-        where: { active: true }
+        where: { active: true },
       });
-      
-      const masterParamMap = new Map(masterParameters.map(mp => [mp.name, mp]));
-      
+
+      const masterParamMap = new Map(
+        masterParameters.map((mp) => [mp.name, mp])
+      );
+
       let createdProductsCount = 0;
       let createdParametersCount = 0;
       let skippedProductsCount = 0;
 
-      // Procesar cada línea de producto (desde línea 4 en adelante)
       for (let i = 3; i < lines.length; i++) {
-        const values = lines[i].split(",").map(v => v.trim());
+        const values = lines[i].split(",").map((v) => v.trim());
         const productName = values[0];
-        
+
         if (!productName || productName === "") continue;
 
-        // Verificar si el producto ya existe
         const existingProduct = await this.prisma.product.findFirst({
-          where: { name: productName }
+          where: { name: productName },
         });
 
         if (existingProduct) {
@@ -469,31 +421,32 @@ class DatabasePopulator {
           continue;
         }
 
-        // Crear el producto
         const product = await this.prisma.product.create({
           data: {
             name: productName,
             code: this.generateProductCode(productName),
             description: `Producto de control: ${productName}`,
-            active: true
-          }
+            active: true,
+          },
         });
 
         createdProductsCount++;
 
-        // Crear parámetros para este producto
         for (let j = 1; j < headers.length && j < values.length; j++) {
           const parameterName = headers[j];
           const parameterValue = values[j];
-          
-          if (!parameterName || !parameterValue || parameterValue === "") continue;
-          
+
+          if (!parameterName || !parameterValue || parameterValue === "")
+            continue;
+
           const masterParam = masterParamMap.get(parameterName);
           if (!masterParam) continue;
 
-          // Parsear el valor del parámetro
-          const parsedValue = this.parseParameterValue(parameterValue, masterParam.type);
-          
+          const parsedValue = this.parseParameterValue(
+            parameterValue,
+            masterParam.type
+          );
+
           if (parsedValue) {
             await this.prisma.parameter.create({
               data: {
@@ -506,10 +459,10 @@ class DatabasePopulator {
                 maxRange: parsedValue.maxRange,
                 unit: masterParam.unit,
                 required: true,
-                active: true
-              }
+                active: true,
+              },
             });
-            
+
             createdParametersCount++;
           }
         }
@@ -517,8 +470,10 @@ class DatabasePopulator {
 
       this.log(`✅ Productos creados: ${createdProductsCount}`, "success");
       this.log(`✅ Parámetros creados: ${createdParametersCount}`, "success");
-      this.log(`⏭️ Productos existentes omitidos: ${skippedProductsCount}`, "info");
-      
+      this.log(
+        `⏭️ Productos existentes omitidos: ${skippedProductsCount}`,
+        "info"
+      );
     } catch (error) {
       this.log("❌ Error creando productos: " + error, "error");
       throw error;
@@ -526,14 +481,20 @@ class DatabasePopulator {
   }
 
   private generateProductCode(name: string): string {
-    // Generar código basado en el nombre del producto
-    return name
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "")
-      .substring(0, 10) + "-" + Date.now().toString().slice(-4);
+    return (
+      name
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .substring(0, 10) +
+      "-" +
+      Date.now().toString().slice(-4)
+    );
   }
 
-  private parseParameterValue(value: string, type: string): {
+  private parseParameterValue(
+    value: string,
+    type: string
+  ): {
     expectedValue?: string;
     minRange?: number;
     maxRange?: number;
@@ -542,101 +503,88 @@ class DatabasePopulator {
 
     const cleanValue = value.trim();
 
-    // Detectar patrones de rango con +/-
-    // Ejemplo: "60 +/- 0.5 g" -> minRange: 59.5, maxRange: 60.5
     const plusMinusPattern = /([0-9.]+)\s*\+\/\-\s*([0-9.]+)/;
     const plusMinusMatch = cleanValue.match(plusMinusPattern);
-    
+
     if (plusMinusMatch) {
       const baseValue = parseFloat(plusMinusMatch[1]);
       const tolerance = parseFloat(plusMinusMatch[2]);
-      
+
       return {
         expectedValue: baseValue.toString(),
         minRange: baseValue - tolerance,
-        maxRange: baseValue + tolerance
+        maxRange: baseValue + tolerance,
       };
     }
 
-    // Detectar rangos explícitos
-    // Ejemplo: "17.30 - 17.50 mm" -> minRange: 17.30, maxRange: 17.50
     const rangePattern = /([0-9.]+)\s*-\s*([0-9.]+)/;
     const rangeMatch = cleanValue.match(rangePattern);
-    
+
     if (rangeMatch) {
       const minValue = parseFloat(rangeMatch[1]);
       const maxValue = parseFloat(rangeMatch[2]);
-      
+
       return {
         expectedValue: ((minValue + maxValue) / 2).toString(),
         minRange: minValue,
-        maxRange: maxValue
+        maxRange: maxValue,
       };
     }
 
-    // Detectar valores numéricos simples
     const numericPattern = /^([0-9.]+)$/;
     const numericMatch = cleanValue.match(numericPattern);
-    
+
     if (numericMatch) {
       const numValue = parseFloat(numericMatch[1]);
-      
-      // Si es tipo range o numeric, usar el valor para min y max
+
       if (type === "range" || type === "numeric") {
         return {
           expectedValue: numValue.toString(),
           minRange: numValue,
-          maxRange: numValue
+          maxRange: numValue,
         };
       }
     }
 
-    // Para valores de texto o no numéricos
     return {
-      expectedValue: cleanValue
+      expectedValue: cleanValue,
     };
   }
-
-  // ============================================================================
-  // PARÁMETROS MAESTROS
-  // ============================================================================
 
   async createMasterParameters(): Promise<void> {
     this.log("⚙️ Creando parámetros maestros desde CSV...", "info");
 
     try {
-      // Leer el archivo CSV
       const csvPath = path.join(__dirname, "..", "PARAMETROS DE CONTROL.csv");
-      
+
       if (!fs.existsSync(csvPath)) {
         this.log("⚠️ Archivo CSV no encontrado: " + csvPath, "warning");
         return;
       }
 
       const csvContent = fs.readFileSync(csvPath, "utf-8");
-      const lines = csvContent.split("\n").filter(line => line.trim());
-      
-      // Obtener headers (línea 3, índice 2)
+      const lines = csvContent.split("\n").filter((line) => line.trim());
+
       if (lines.length < 3) {
         this.log("⚠️ CSV no tiene suficientes líneas", "warning");
         return;
       }
 
-      const headers = lines[2].split(",").map(h => h.trim());
+      const headers = lines[2].split(",").map((h) => h.trim());
       this.log(`📋 Headers encontrados: ${headers.length} columnas`, "info");
 
-      // Extraer parámetros únicos de los headers (excluyendo PRODUCTO)
-      const parameterNames = headers.slice(1).filter(name => name && name !== "PRODUCTO");
-      
+      const parameterNames = headers
+        .slice(1)
+        .filter((name) => name && name !== "PRODUCTO");
+
       let createdCount = 0;
       let skippedCount = 0;
 
       for (const paramName of parameterNames) {
         if (!paramName || paramName.trim() === "") continue;
 
-        // Verificar si ya existe
         const existing = await this.prisma.masterParameter.findFirst({
-          where: { name: paramName }
+          where: { name: paramName },
         });
 
         if (existing) {
@@ -644,42 +592,54 @@ class DatabasePopulator {
           continue;
         }
 
-        // Determinar tipo basado en el nombre del parámetro
         let type: "range" | "text" | "numeric" = "text";
         let unit: string | undefined;
-        
+
         const lowerName = paramName.toLowerCase();
-        
-        if (lowerName.includes("peso") || lowerName.includes("gramaje") || 
-            lowerName.includes("altura") || lowerName.includes("ancho") || 
-            lowerName.includes("largo") || lowerName.includes("diámetro") ||
-            lowerName.includes("capacidad") || lowerName.includes("calibre")) {
+
+        if (
+          lowerName.includes("peso") ||
+          lowerName.includes("gramaje") ||
+          lowerName.includes("altura") ||
+          lowerName.includes("ancho") ||
+          lowerName.includes("largo") ||
+          lowerName.includes("diámetro") ||
+          lowerName.includes("capacidad") ||
+          lowerName.includes("calibre")
+        ) {
           type = "range";
-          
-          // Asignar unidades comunes
+
           if (lowerName.includes("peso")) unit = "g";
           else if (lowerName.includes("gramaje")) unit = "g/m²";
-          else if (lowerName.includes("altura") || lowerName.includes("ancho") || 
-                   lowerName.includes("largo") || lowerName.includes("diámetro")) unit = "mm";
+          else if (
+            lowerName.includes("altura") ||
+            lowerName.includes("ancho") ||
+            lowerName.includes("largo") ||
+            lowerName.includes("diámetro")
+          )
+            unit = "mm";
           else if (lowerName.includes("capacidad")) unit = "ml";
           else if (lowerName.includes("calibre")) unit = "mm";
-        } else if (lowerName.includes("ph") || lowerName.includes("brix") || 
-                   lowerName.includes("refracción") || lowerName.includes("puentes")) {
+        } else if (
+          lowerName.includes("ph") ||
+          lowerName.includes("brix") ||
+          lowerName.includes("refracción") ||
+          lowerName.includes("puentes")
+        ) {
           type = "numeric";
-          
+
           if (lowerName.includes("brix")) unit = "°Brix";
           else if (lowerName.includes("refracción")) unit = "nD";
         }
 
-        // Crear el parámetro maestro
         await this.prisma.masterParameter.create({
           data: {
             name: paramName,
             description: `Parámetro de control: ${paramName}`,
             type: type,
             unit: unit,
-            active: true
-          }
+            active: true,
+          },
         });
 
         createdCount++;
@@ -687,16 +647,11 @@ class DatabasePopulator {
 
       this.log(`✅ Parámetros maestros creados: ${createdCount}`, "success");
       this.log(`⏭️ Parámetros existentes omitidos: ${skippedCount}`, "info");
-      
     } catch (error) {
       this.log("❌ Error creando parámetros maestros: " + error, "error");
       throw error;
     }
   }
-
-  // ============================================================================
-  // MÉTODO PRINCIPAL
-  // ============================================================================
 
   async populateDatabase(
     options: {
@@ -708,7 +663,6 @@ class DatabasePopulator {
   ) {
     this.log("🚀 Iniciando población de base de datos...", "info");
 
-    // Verificar conexión
     const connected = await this.checkConnection();
     if (!connected) {
       throw new Error("No se pudo conectar a la base de datos");
@@ -718,7 +672,6 @@ class DatabasePopulator {
       let userId: string | undefined;
       let adminRoleId: string | undefined;
 
-      // Ejecutar según opciones
       if (options.users !== false) {
         userId = await this.createAdminUser();
       }
@@ -728,7 +681,6 @@ class DatabasePopulator {
         adminRoleId = roleId;
       }
 
-      // Asignar rol al usuario si ambos existen
       if (userId && adminRoleId) {
         await this.assignAdminRoleToUser(userId, adminRoleId);
       }
@@ -748,25 +700,19 @@ class DatabasePopulator {
     }
   }
 
-  // Cerrar conexión
   async disconnect() {
     await this.prisma.$disconnect();
   }
 }
 
-// ============================================================================
-// EJECUCIÓN DEL SCRIPT
-// ============================================================================
-
 async function main() {
   const populator = new DatabasePopulator(prisma);
 
   try {
-    // Obtener argumentos de línea de comandos
     const args = process.argv.slice(2);
     const options = {
       users: !args.includes("--skip-users"),
-      roles: !args.includes("--skip-roles"), // Por defecto crear roles
+      roles: !args.includes("--skip-roles"),
       products: args.includes("--products"),
       masterParameters: args.includes("--master-parameters"),
     };
@@ -779,7 +725,6 @@ async function main() {
     console.log("\n" + "=".repeat(60));
     console.log("✨ Script completado exitosamente");
 
-    // Mostrar credenciales
     if (options.users) {
       console.log("\n🔑 Credenciales de acceso:");
       console.log("   Email: admin@sistema.com");
@@ -796,7 +741,6 @@ async function main() {
   }
 }
 
-// Ejecutar si es el archivo principal
 if (require.main === module) {
   main();
 }

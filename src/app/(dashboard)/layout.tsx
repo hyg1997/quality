@@ -93,7 +93,6 @@ export default function DashboardLayout({
     setMounted(true);
   }, []);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (status === "loading" || !mounted) return;
     if (!session) {
@@ -101,7 +100,6 @@ export default function DashboardLayout({
     }
   }, [session, status, mounted, router]);
 
-  // Show loading while checking authentication
   if (status === "loading" || !session || !mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -144,9 +142,7 @@ export default function DashboardLayout({
       <div
         className={`fixed inset-y-0 left-0 z-50 bg-white shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 ${
           sidebarCollapsed ? "w-16" : "w-64"
-        } ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -160,16 +156,16 @@ export default function DashboardLayout({
                 Control de Calidad
               </h1>
             )}
-            
+
             {/* Toggle button - only visible on desktop */}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className="hidden lg:flex absolute -right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 bg-blue-600 border-2 border-white rounded-full items-center justify-center hover:bg-blue-700 transition-colors"
             >
-              <ChevronLeft 
+              <ChevronLeft
                 className={`h-3 w-3 text-white transition-transform duration-300 ${
                   sidebarCollapsed ? "rotate-180" : ""
-                }`} 
+                }`}
               />
             </button>
           </div>
@@ -200,7 +196,11 @@ export default function DashboardLayout({
                   }`}
                   title={sidebarCollapsed ? item.name : undefined}
                 >
-                  <item.icon className={`h-5 w-5 flex-shrink-0 ${sidebarCollapsed ? "" : "mr-3"}`} />
+                  <item.icon
+                    className={`h-5 w-5 flex-shrink-0 ${
+                      sidebarCollapsed ? "" : "mr-3"
+                    }`}
+                  />
                   {!sidebarCollapsed && (
                     <>
                       <span className="truncate">{item.name}</span>
@@ -209,7 +209,7 @@ export default function DashboardLayout({
                       )}
                     </>
                   )}
-                  
+
                   {/* Tooltip for collapsed state */}
                   {sidebarCollapsed && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
@@ -294,7 +294,11 @@ export default function DashboardLayout({
       </div>
 
       {/* Main content */}
-      <div className={`transition-all duration-300 ${sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"}`}>
+      <div
+        className={`transition-all duration-300 ${
+          sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"
+        }`}
+      >
         {/* Top header */}
         <header className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
           <div className="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">

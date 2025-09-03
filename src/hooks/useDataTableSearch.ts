@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearch } from './useSearch';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearch } from "./useSearch";
 
 interface UseDataTableSearchOptions<T> {
   fetchData: (searchTerm?: string) => Promise<T[]>;
@@ -21,56 +21,47 @@ interface UseDataTableSearchReturn<T> {
   refetch: () => Promise<void>;
 }
 
-/**
- * Hook personalizado para manejar búsquedas en DataTables
- * Integra el debouncing con la lógica de fetch de datos
- */
 export function useDataTableSearch<T>({
   fetchData,
   debounceMs = 500,
   minLength = 2,
-  placeholder = "Buscar..."
+  placeholder = "Buscar...",
 }: UseDataTableSearchOptions<T>): UseDataTableSearchReturn<T> {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const {
     searchTerm,
     debouncedSearchTerm,
     setSearchTerm,
     clearSearch,
-    isSearching
+    isSearching,
   } = useSearch({ debounceMs, minLength });
 
-  // Usar ref para estabilizar fetchData
   const fetchDataRef = useRef(fetchData);
   fetchDataRef.current = fetchData;
 
-  // Función para cargar datos
   const loadData = useCallback(async (searchValue?: string) => {
     setLoading(true);
     try {
       const result = await fetchDataRef.current(searchValue);
       setData(result);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
       setData([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Cargar datos iniciales
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Cargar datos cuando cambie el término de búsqueda debounced
   useEffect(() => {
     if (debouncedSearchTerm) {
       loadData(debouncedSearchTerm);
-    } else if (searchTerm === '') {
-      // Si se limpia la búsqueda, cargar todos los datos
+    } else if (searchTerm === "") {
       loadData();
     }
   }, [debouncedSearchTerm, searchTerm, loadData]);
@@ -92,9 +83,9 @@ export function useDataTableSearch<T>({
       onChange: setSearchTerm,
       placeholder,
       onClear: handleClear,
-      isSearching
+      isSearching,
     },
-    refetch
+    refetch,
   };
 }
 

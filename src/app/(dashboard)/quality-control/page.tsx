@@ -51,7 +51,6 @@ export default function QualityControlPage() {
   const { hasPermission } = usePermissions();
   const { success, error } = useNotifications();
 
-  // Form state
   const [formData, setFormData] = useState<ControlFormData>({
     productId: "",
     internalLot: "",
@@ -61,7 +60,6 @@ export default function QualityControlPage() {
     verifiedBy: session?.user?.fullName || "",
   });
 
-  // Data state
   const [products, setProducts] = useState<Product[]>([]);
   const [parameters, setParameters] = useState<ParameterForControl[]>([]);
   const [controls, setControls] = useState<ParameterControl[]>([]);
@@ -70,7 +68,6 @@ export default function QualityControlPage() {
   const [loading, setLoading] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
-  // Update date/time every second
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentDateTime(new Date());
@@ -78,14 +75,12 @@ export default function QualityControlPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Cleanup photo URLs on unmount
   useEffect(() => {
     return () => {
       photoUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [photoUrls]);
 
-  // Update verified by when session changes
   useEffect(() => {
     if (session?.user?.fullName) {
       setFormData((prev) => ({
@@ -106,7 +101,6 @@ export default function QualityControlPage() {
     }
   }, [error]);
 
-  // Load products on mount
   useEffect(() => {
     if (session && hasPermission("content:read")) {
       loadProducts();
@@ -120,7 +114,6 @@ export default function QualityControlPage() {
       if (response.success && response.data) {
         setParameters(response.data);
 
-        // Initialize controls for each parameter
         const initialControls: ParameterControl[] = response.data.map(
           (param) => ({
             parameterId: param.id,
@@ -171,10 +164,8 @@ export default function QualityControlPage() {
       const updated = [...prev];
       const control = updated[index];
 
-      // Update value
       control.controlValue = value;
 
-      // Validate
       const validation = controlService.validateControlValue(
         value,
         control.parameterType,
@@ -200,10 +191,9 @@ export default function QualityControlPage() {
 
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    const newPhotos = [...photos, ...files].slice(0, 2); // Max 2 photos
+    const newPhotos = [...photos, ...files].slice(0, 2);
     setPhotos(newPhotos);
 
-    // Create URLs for preview
     const newUrls = [...photoUrls];
     files.forEach((file, index) => {
       if (photos.length + index < 2) {
@@ -217,19 +207,17 @@ export default function QualityControlPage() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: "environment" }, // Prefer rear camera
+          facingMode: { ideal: "environment" },
           width: { ideal: 1920 },
           height: { ideal: 1080 },
         },
       });
 
-      // Create video element
       const video = document.createElement("video");
       video.srcObject = stream;
       video.autoplay = true;
       video.playsInline = true;
 
-      // Create modal for camera
       const modal = document.createElement("div");
       modal.className =
         "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50";
@@ -302,7 +290,6 @@ export default function QualityControlPage() {
   };
 
   const removePhoto = (index: number) => {
-    // Revoke URL to prevent memory leaks
     if (photoUrls[index]) {
       URL.revokeObjectURL(photoUrls[index]);
     }
@@ -338,7 +325,6 @@ export default function QualityControlPage() {
     try {
       setLoading(true);
 
-      // Prepare photos data
       console.log("Preparing photos data, count:", photos.length);
       const photosData = await Promise.all(
         photos.map(async (photo, index) => {
@@ -349,7 +335,7 @@ export default function QualityControlPage() {
           });
 
           const base64 = await controlService.fileToBase64(photo);
-          const base64Data = base64.split(",")[1]; // Remove data:image/jpeg;base64, prefix
+          const base64Data = base64.split(",")[1];
 
           console.log(`Photo ${index + 1} base64 length:`, base64Data.length);
 
@@ -368,7 +354,6 @@ export default function QualityControlPage() {
         }))
       );
 
-      // Prepare controls data
       const controlsData: CreateControlData[] = controls.map((control) => ({
         parameterId: control.parameterId,
         parameterName: control.parameterName,
@@ -385,7 +370,6 @@ export default function QualityControlPage() {
         alertMessage: control.validationMessage,
       }));
 
-      // Prepare quality control record
       const qualityRecord: QualityControlRecord = {
         productId: formData.productId,
         internalLot: formData.internalLot,
@@ -413,10 +397,6 @@ export default function QualityControlPage() {
           "El control de calidad ha sido guardado exitosamente"
         );
 
-        // Generate PDF (this would be implemented with jsPDF)
-        // await generatePDF(qualityRecord);
-
-        // Clear form
         clearForm();
       } else {
         error(

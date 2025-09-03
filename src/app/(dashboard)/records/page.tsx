@@ -42,26 +42,25 @@ export default function RecordsManagement() {
   const viewModal = useModal<ProductRecord>();
   const confirmModal = useConfirmModal();
 
-  // Hook para manejar búsqueda de registros
   const {
     data: records,
     loading,
     searchProps,
-    refetch: refetchRecords
+    refetch: refetchRecords,
   } = useDataTableSearch<ProductRecord>({
     fetchData: async (searchTerm?: string) => {
       const response = await recordService.getRecords({
         limit: 100,
-        search: searchTerm
+        search: searchTerm,
       });
-      
+
       if (!response.success || !response.data) {
-        throw new Error('Error fetching records');
+        throw new Error("Error fetching records");
       }
-      
+
       return response.data.records;
     },
-    placeholder: "Buscar registros por lote, producto o estado..."
+    placeholder: "Buscar registros por lote, producto o estado...",
   });
 
   const fetchProducts = useCallback(async () => {
@@ -205,10 +204,9 @@ export default function RecordsManagement() {
   const generatePDFDocument = useCallback(
     async (record: ProductRecord) => {
       try {
-        // Parallel loading: Get data and import jsPDF simultaneously
         const [response, jsPDF] = await Promise.all([
           controlService.getQualityControl(record.id),
-          import("jspdf").then(module => module.default)
+          import("jspdf").then((module) => module.default),
         ]);
 
         if (!response.success || !response.data) {
@@ -222,13 +220,11 @@ export default function RecordsManagement() {
         const { record: recordData, controls, photos } = response.data;
         const doc = new jsPDF();
 
-        // Title
         doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
         doc.text("Registro de Producto", 105, 15, { align: "center" });
         doc.line(10, 20, 200, 20);
 
-        // Basic information
         doc.setFontSize(12);
         doc.setFont("helvetica", "normal");
         let currentY = 30;
@@ -265,7 +261,6 @@ export default function RecordsManagement() {
           currentY += 10;
         }
 
-        // Quality control section
         currentY += 10;
         doc.line(10, currentY, 200, currentY);
         currentY += 10;
@@ -277,17 +272,15 @@ export default function RecordsManagement() {
         const alertas: string[] = [];
 
         if (controls && controls.length > 0) {
-          // Table headers with borders
           doc.setFillColor(200, 200, 200);
           doc.rect(10, currentY, 190, 12, "F");
           doc.rect(10, currentY, 190, 12, "S");
 
-          // Column borders
-          doc.line(10, currentY, 10, currentY + 12); // Left border
-          doc.line(60, currentY, 60, currentY + 12); // After Parámetro
-          doc.line(120, currentY, 120, currentY + 12); // After Rango
-          doc.line(150, currentY, 150, currentY + 12); // After Control
-          doc.line(200, currentY, 200, currentY + 12); // Right border
+          doc.line(10, currentY, 10, currentY + 12);
+          doc.line(60, currentY, 60, currentY + 12);
+          doc.line(120, currentY, 120, currentY + 12);
+          doc.line(150, currentY, 150, currentY + 12);
+          doc.line(200, currentY, 200, currentY + 12);
 
           doc.setFont("helvetica", "bold");
           doc.text("Parámetro", 12, currentY + 8);
@@ -297,7 +290,6 @@ export default function RecordsManagement() {
           doc.setFont("helvetica", "normal");
           currentY += 12;
 
-          // Controls data with borders
           for (const control of controls) {
             if (currentY > 250) {
               doc.addPage();
@@ -315,7 +307,6 @@ export default function RecordsManagement() {
               alertas.push(`${parametro}: ${control.alertMessage}`);
             }
 
-            // Text content with proper wrapping
             const wrappedParametro = doc.splitTextToSize(parametro, 48);
             const wrappedEspecificacion = doc.splitTextToSize(
               especificacion,
@@ -324,7 +315,6 @@ export default function RecordsManagement() {
             const wrappedControlValue = doc.splitTextToSize(controlValue, 28);
             const wrappedObservacion = doc.splitTextToSize(observacion, 48);
 
-            // Calculate row height based on the tallest wrapped text
             const maxLines = Math.max(
               Array.isArray(wrappedParametro) ? wrappedParametro.length : 1,
               Array.isArray(wrappedEspecificacion)
@@ -337,27 +327,23 @@ export default function RecordsManagement() {
             );
 
             const lineHeight = 5;
-            const rowHeight = Math.max(10, maxLines * lineHeight + 4); // Minimum 10, or calculated height
+            const rowHeight = Math.max(10, maxLines * lineHeight + 4);
 
-            // Check if we need a new page with the calculated height
             if (currentY + rowHeight > 280) {
               doc.addPage();
               currentY = 20;
             }
 
-            // Draw cell borders with calculated height
             doc.rect(10, currentY, 190, rowHeight, "S");
             doc.line(60, currentY, 60, currentY + rowHeight);
             doc.line(120, currentY, 120, currentY + rowHeight);
             doc.line(150, currentY, 150, currentY + rowHeight);
 
-            // Draw text with proper vertical centering
             const textStartY = currentY + 4;
 
             doc.text(wrappedParametro, 12, textStartY);
             doc.text(wrappedEspecificacion, 62, textStartY);
 
-            // Control value with color if out of range
             if (fueraDeRango) {
               doc.setTextColor(255, 0, 0);
               doc.text(wrappedControlValue, 122, textStartY);
@@ -378,7 +364,6 @@ export default function RecordsManagement() {
           currentY += 10;
         }
 
-        // Alerts section
         if (alertas.length > 0) {
           currentY += 10;
           doc.setFont("helvetica", "bold");
@@ -394,7 +379,6 @@ export default function RecordsManagement() {
           doc.setTextColor(0, 0, 0);
         }
 
-        // Photos section
         currentY += 10;
         if (currentY > 250) {
           doc.addPage();
@@ -405,12 +389,15 @@ export default function RecordsManagement() {
           doc.text("Evidencia Fotográfica", 10, currentY);
           currentY += 10;
 
-          // Process images in parallel for better performance
           const imagePromises = photos.map(async (photo) => {
             try {
               const base64Image = `data:image/jpeg;base64,${photo.base64Data}`;
-              
-              return new Promise<{photo: typeof photo, dimensions: {width: number, height: number}, base64: string}>((resolve, reject) => {
+
+              return new Promise<{
+                photo: typeof photo;
+                dimensions: { width: number; height: number };
+                base64: string;
+              }>((resolve, reject) => {
                 const img = new Image();
                 img.onload = () => {
                   const maxWidth = 140;
@@ -426,9 +413,14 @@ export default function RecordsManagement() {
                     height = maxHeight;
                   }
 
-                  resolve({ photo, dimensions: { width, height }, base64: base64Image });
+                  resolve({
+                    photo,
+                    dimensions: { width, height },
+                    base64: base64Image,
+                  });
                 };
-                img.onerror = () => reject(new Error(`Failed to load image: ${photo.filename}`));
+                img.onerror = () =>
+                  reject(new Error(`Failed to load image: ${photo.filename}`));
                 img.src = base64Image;
               });
             } catch (err) {
@@ -437,14 +429,12 @@ export default function RecordsManagement() {
             }
           });
 
-          // Wait for all images to be processed
           const processedImages = await Promise.allSettled(imagePromises);
-          
-          // Add processed images to PDF
+
           for (const result of processedImages) {
-            if (result.status === 'fulfilled' && result.value) {
+            if (result.status === "fulfilled" && result.value) {
               const { dimensions, base64 } = result.value;
-              
+
               if (currentY + dimensions.height > 280) {
                 doc.addPage();
                 currentY = 20;
@@ -459,12 +449,8 @@ export default function RecordsManagement() {
                 dimensions.height
               );
               currentY += dimensions.height + 10;
-            } else if (result.status === 'rejected') {
-              doc.text(
-                `Error cargando imagen`,
-                10,
-                currentY
-              );
+            } else if (result.status === "rejected") {
+              doc.text(`Error cargando imagen`, 10, currentY);
               currentY += 10;
             }
           }
@@ -484,7 +470,6 @@ export default function RecordsManagement() {
 
   const handlePreviewPDF = useCallback(
     async (record: ProductRecord) => {
-      // Show loading notification
       success(
         "Generando vista previa...",
         "Por favor espera mientras se genera el PDF"
@@ -496,22 +481,22 @@ export default function RecordsManagement() {
 
         const { doc } = result;
 
-        // Create blob and open in new window for preview
-        const pdfBlob = doc.output('blob');
+        const pdfBlob = doc.output("blob");
         const blobUrl = URL.createObjectURL(pdfBlob);
-        
-        // Open in new window for preview
-        const previewWindow = window.open(blobUrl, '_blank');
+
+        const previewWindow = window.open(blobUrl, "_blank");
         if (!previewWindow) {
-          error("Error de navegador", "No se pudo abrir la vista previa. Verifica que los pop-ups estén habilitados.");
+          error(
+            "Error de navegador",
+            "No se pudo abrir la vista previa. Verifica que los pop-ups estén habilitados."
+          );
           URL.revokeObjectURL(blobUrl);
           return;
         }
 
-        // Clean up the blob URL after a delay
         setTimeout(() => {
           URL.revokeObjectURL(blobUrl);
-        }, 5000); // Increased timeout for better UX
+        }, 5000);
 
         success(
           "Vista previa lista",
@@ -519,7 +504,10 @@ export default function RecordsManagement() {
         );
       } catch (err) {
         console.error("Error generating PDF preview:", err);
-        error("Error al generar vista previa", "No se pudo generar la vista previa del PDF");
+        error(
+          "Error al generar vista previa",
+          "No se pudo generar la vista previa del PDF"
+        );
       }
     },
     [generatePDFDocument, success, error]
@@ -527,7 +515,6 @@ export default function RecordsManagement() {
 
   const handleDownloadPDF = useCallback(
     async (record: ProductRecord) => {
-      // Show loading notification
       success(
         "Generando PDF...",
         "Por favor espera mientras se procesa el documento"
@@ -539,28 +526,27 @@ export default function RecordsManagement() {
 
         const { doc, recordData } = result;
 
-        // Generate optimized filename
-        const productName = recordData.product?.name?.replace(/[^a-zA-Z0-9]/g, '_') || "Registro";
+        const productName =
+          recordData.product?.name?.replace(/[^a-zA-Z0-9]/g, "_") || "Registro";
         const date = new Date(recordData.registrationDate)
-          .toLocaleDateString('es-ES')
+          .toLocaleDateString("es-ES")
           .replace(/\//g, "-");
         const filename = `${productName}_${date}_${recordData.internalLot}.pdf`;
-        
+
         doc.save(filename);
 
-        success(
-          "PDF descargado",
-          `Archivo guardado como: ${filename}`
-        );
+        success("PDF descargado", `Archivo guardado como: ${filename}`);
       } catch (err) {
         console.error("Error downloading PDF:", err);
-        error("Error al descargar PDF", "No se pudo descargar el PDF del registro");
+        error(
+          "Error al descargar PDF",
+          "No se pudo descargar el PDF del registro"
+        );
       }
     },
     [generatePDFDocument, success, error]
   );
 
-  // Memoize columns definition to prevent recreation on every render
   const columns: ColumnDef<ProductRecord>[] = useMemo(
     () => [
       {
@@ -615,7 +601,6 @@ export default function RecordsManagement() {
     []
   );
 
-  // Memoize actions definition to prevent recreation on every render
   const actions: ActionDef<ProductRecord>[] = useMemo(
     () => [
       {
@@ -710,7 +695,6 @@ export default function RecordsManagement() {
   );
 }
 
-// Componente Modal para Crear/Editar Registros
 interface RecordFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -922,7 +906,6 @@ function RecordFormModal({
   );
 }
 
-// Componente Modal para Ver Registro
 interface RecordViewModalProps {
   isOpen: boolean;
   onClose: () => void;

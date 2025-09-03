@@ -1,90 +1,87 @@
-"use client"
+"use client";
 
-import { useState, useEffect, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { signIn } from "next-auth/react"
-import { Lock, Check } from "lucide-react"
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { Lock, Check } from "lucide-react";
 
 function TwoFactorVerifyContent() {
-  const [token, setToken] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  
-  const username = searchParams.get('username')
-  const password = searchParams.get('password')
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
+  const [token, setToken] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const username = searchParams.get("username");
+  const password = searchParams.get("password");
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
   useEffect(() => {
-    // Si no hay credenciales, redirigir al login
     if (!username || !password) {
-      router.push('/auth/signin')
+      router.push("/auth/signin");
     }
-  }, [username, password, router])
+  }, [username, password, router]);
 
   const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     if (!token) {
-      setError('Ingresa el código de verificación')
-      return
+      setError("Ingresa el código de verificación");
+      return;
     }
 
     if (!username || !password) {
-      setError('Sesión expirada, inicia sesión nuevamente')
-      router.push('/auth/signin')
-      return
+      setError("Sesión expirada, inicia sesión nuevamente");
+      router.push("/auth/signin");
+      return;
     }
 
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError("");
 
     try {
-      // Verificar 2FA
-      const response = await fetch('/api/auth/2fa/login-verify', {
-        method: 'POST',
+      const response = await fetch("/api/auth/2fa/login-verify", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, password, token })
-      })
+        body: JSON.stringify({ username, password, token }),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
-        // Si la verificación es exitosa, hacer login con NextAuth
-        const result = await signIn('credentials', {
+        const result = await signIn("credentials", {
           username,
           password,
-          redirect: false
-        })
+          redirect: false,
+        });
 
         if (result?.ok) {
-          router.push(callbackUrl)
+          router.push(callbackUrl);
         } else {
-          setError('Error al iniciar sesión')
+          setError("Error al iniciar sesión");
         }
       } else {
-        setError(data.error || 'Error al verificar el código')
+        setError(data.error || "Error al verificar el código");
       }
     } catch {
-      setError('Error de conexión')
+      setError("Error de conexión");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleBackToLogin = () => {
-    router.push('/auth/signin')
-  }
+    router.push("/auth/signin");
+  };
 
   if (!username || !password) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
-    )
+    );
   }
 
   return (
@@ -102,13 +99,26 @@ function TwoFactorVerifyContent() {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6 bg-white p-8 rounded-xl shadow-lg" onSubmit={handleVerify}>
+        <form
+          className="mt-8 space-y-6 bg-white p-8 rounded-xl shadow-lg"
+          onSubmit={handleVerify}
+        >
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-5 w-5 text-red-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </div>
                 <div className="ml-3">
@@ -119,7 +129,10 @@ function TwoFactorVerifyContent() {
           )}
 
           <div>
-            <label htmlFor="token" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="token"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Código de Verificación
             </label>
             <input
@@ -127,7 +140,9 @@ function TwoFactorVerifyContent() {
               name="token"
               type="text"
               value={token}
-              onChange={(e) => setToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onChange={(e) =>
+                setToken(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
               required
               className="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm transition-colors duration-200 text-center text-2xl font-mono tracking-widest"
               placeholder="000000"
@@ -157,7 +172,7 @@ function TwoFactorVerifyContent() {
                 </span>
               )}
             </button>
-            
+
             <button
               type="button"
               onClick={handleBackToLogin}
@@ -172,13 +187,26 @@ function TwoFactorVerifyContent() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center justify-center">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="h-5 w-5 text-blue-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
               <div className="ml-3">
                 <p className="text-sm text-blue-700">
-                  <strong>¿No tienes acceso a tu aplicación de autenticación?</strong><br />
+                  <strong>
+                    ¿No tienes acceso a tu aplicación de autenticación?
+                  </strong>
+                  <br />
                   Contacta al administrador del sistema para obtener ayuda.
                 </p>
               </div>
@@ -187,17 +215,19 @@ function TwoFactorVerifyContent() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default function TwoFactorVerifyPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        </div>
+      }
+    >
       <TwoFactorVerifyContent />
     </Suspense>
-  )
+  );
 }

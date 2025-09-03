@@ -43,7 +43,6 @@ export default function UsersManagement() {
   const editModal = useModal<User>();
   const confirmModal = useConfirmModal();
 
-  // Hook para manejar búsqueda de usuarios
   const {
     data: users,
     loading,
@@ -69,7 +68,6 @@ export default function UsersManagement() {
   const fetchRoles = useCallback(async () => {
     const response = await roleService.getRoles();
     if (response.success && response.data) {
-      // Extract roles for user assignment
       const userRoles = response.data.map((role) => ({
         id: role.id,
         name: role.name,
@@ -80,7 +78,6 @@ export default function UsersManagement() {
     }
   }, []);
 
-  // Memoize columns definition to prevent recreation on every render
   const columns: ColumnDef<User>[] = useMemo(
     () => [
       {
@@ -305,7 +302,6 @@ export default function UsersManagement() {
     }
   };
 
-  // Memoize actions definition to prevent recreation on every render
   const actions: ActionDef<User>[] = useMemo(
     () => [
       {
@@ -427,7 +423,6 @@ export default function UsersManagement() {
   );
 }
 
-// Componente Modal para Crear/Editar Usuarios
 interface UserFormModalProps {
   isOpen: boolean;
   onClose: () => void;

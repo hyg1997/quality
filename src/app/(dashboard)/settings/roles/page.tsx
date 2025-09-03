@@ -61,7 +61,6 @@ export default function RolesManagementPage() {
   const editModal = useModal<Role>();
   const confirmModal = useConfirmModal();
 
-  // Hook para manejar búsqueda de roles
   const {
     data: roles,
     loading,
@@ -212,7 +211,6 @@ export default function RolesManagementPage() {
     [refetchRoles, success, error]
   );
 
-  // Memoize columns definition to prevent recreation on every render
   const columns: ColumnDef<Role>[] = useMemo(
     () => [
       {
@@ -302,7 +300,6 @@ export default function RolesManagementPage() {
     [editModal, confirmModal, handleDeleteRole, hasPermission]
   );
 
-  // Loading state
   if (status === "loading" || permissionsLoading) {
     return (
       <PageLayout title="Gestión de Roles">
@@ -326,7 +323,6 @@ export default function RolesManagementPage() {
     );
   }
 
-  // Access denied
   if (!session || !isAdmin) {
     return (
       <PageLayout title="Acceso Denegado">
@@ -403,7 +399,6 @@ export default function RolesManagementPage() {
   );
 }
 
-// Componente Modal para Crear/Editar Roles
 interface RoleFormModalProps {
   isOpen: boolean;
   onClose: () => void;

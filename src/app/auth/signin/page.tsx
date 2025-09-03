@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { signIn } from "next-auth/react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useActionState, Suspense } from "react"
-import { Button, Input, Card, CardContent } from "@/components/ui"
-import { Factory, Lock } from "lucide-react"
+import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useActionState, Suspense } from "react";
+import { Button, Input, Card, CardContent } from "@/components/ui";
+import { Factory, Lock } from "lucide-react";
 
 type LoginState = {
   error?: string;
@@ -26,31 +26,28 @@ async function handleLogin(
   }
 
   try {
-    // Primero verificar si el usuario necesita 2FA
-    const checkResponse = await fetch('/api/auth/2fa/check-required', {
-      method: 'POST',
+    const checkResponse = await fetch("/api/auth/2fa/check-required", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password }),
     });
 
     if (checkResponse.ok) {
       const checkData = await checkResponse.json();
-      
+
       if (checkData.requires2FA) {
-        // Redirigir a página de verificación 2FA
-        return { 
-           error: undefined, 
-           success: false, 
-           requires2FA: true, 
-           username, 
-           password 
-         };
+        return {
+          error: undefined,
+          success: false,
+          requires2FA: true,
+          username,
+          password,
+        };
       }
     }
 
-    // Si no requiere 2FA o la verificación falló, proceder con login normal
     const result = await signIn("credentials", {
       username,
       password,
@@ -84,7 +81,7 @@ function SignInContent() {
     const params = new URLSearchParams({
       username: state.username,
       password: state.password,
-      callbackUrl: searchParams.get('callbackUrl') || '/dashboard'
+      callbackUrl: searchParams.get("callbackUrl") || "/dashboard",
     });
     router.push(`/auth/2fa-verify?${params.toString()}`);
   }
@@ -96,9 +93,7 @@ function SignInContent() {
           <div className="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
             <Factory className="text-white h-8 w-8" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">
-            Iniciar Sesión
-          </h2>
+          <h2 className="text-3xl font-bold text-gray-900">Iniciar Sesión</h2>
           <p className="mt-2 text-sm text-gray-600">
             Sistema de Control de Calidad
           </p>
@@ -149,7 +144,7 @@ function SignInContent() {
                 >
                   {isPending ? "Iniciando sesión..." : "Iniciar Sesión"}
                 </Button>
-                
+
                 <div className="text-center">
                   <a
                     href="/auth/forgot-password"
@@ -164,17 +159,19 @@ function SignInContent() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
 
 export default function SignIn() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        </div>
+      }
+    >
       <SignInContent />
     </Suspense>
-  )
+  );
 }

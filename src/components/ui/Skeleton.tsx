@@ -1,36 +1,36 @@
-import { HTMLAttributes } from 'react'
-import { cn } from '@/lib/utils'
+import { HTMLAttributes } from "react";
+import { cn } from "@/lib/utils";
 
 interface SkeletonProps extends HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'text' | 'circular' | 'rectangular'
-  width?: string | number
-  height?: string | number
-  lines?: number
+  variant?: "default" | "text" | "circular" | "rectangular";
+  width?: string | number;
+  height?: string | number;
+  lines?: number;
 }
 
-export function Skeleton({ 
-  className, 
-  variant = 'default', 
-  width, 
-  height, 
+export function Skeleton({
+  className,
+  variant = "default",
+  width,
+  height,
   lines = 1,
-  ...props 
+  ...props
 }: SkeletonProps) {
-  const baseClasses = 'animate-pulse bg-gray-200 dark:bg-gray-700'
-  
+  const baseClasses = "animate-pulse bg-gray-200 dark:bg-gray-700";
+
   const variants = {
-    default: 'rounded-md',
-    text: 'rounded h-4',
-    circular: 'rounded-full',
-    rectangular: 'rounded-none'
-  }
-  
+    default: "rounded-md",
+    text: "rounded h-4",
+    circular: "rounded-full",
+    rectangular: "rounded-none",
+  };
+
   const style = {
-    width: typeof width === 'number' ? `${width}px` : width,
-    height: typeof height === 'number' ? `${height}px` : height
-  }
-  
-  if (variant === 'text' && lines > 1) {
+    width: typeof width === "number" ? `${width}px` : width,
+    height: typeof height === "number" ? `${height}px` : height,
+  };
+
+  if (variant === "text" && lines > 1) {
     return (
       <div className="space-y-2">
         {Array.from({ length: lines }).map((_, index) => (
@@ -39,7 +39,7 @@ export function Skeleton({
             className={cn(
               baseClasses,
               variants.text,
-              index === lines - 1 ? 'w-3/4' : 'w-full',
+              index === lines - 1 ? "w-3/4" : "w-full",
               className
             )}
             style={style}
@@ -47,20 +47,16 @@ export function Skeleton({
           />
         ))}
       </div>
-    )
+    );
   }
-  
+
   return (
     <div
-      className={cn(
-        baseClasses,
-        variants[variant],
-        className
-      )}
+      className={cn(baseClasses, variants[variant], className)}
       style={style}
       {...props}
     />
-  )
+  );
 }
 
 export function SkeletonCard() {
@@ -79,7 +75,7 @@ export function SkeletonCard() {
         <Skeleton width={80} height={32} />
       </div>
     </div>
-  )
+  );
 }
 
 export function SkeletonTable({ rows = 5 }: { rows?: number }) {
@@ -104,7 +100,7 @@ export function SkeletonTable({ rows = 5 }: { rows?: number }) {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
-export default Skeleton
+export default Skeleton;

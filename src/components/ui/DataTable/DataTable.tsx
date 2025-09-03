@@ -58,7 +58,6 @@ function DataTableComponent<T extends Record<string, unknown>>({
   pagination,
   search,
 }: DataTableProps<T>) {
-  // Memoize helper functions to prevent recreation on every render
   const getCellValue = useCallback((item: T, column: ColumnDef<T>) => {
     if (column.cell) {
       return column.cell(item);
@@ -283,7 +282,6 @@ function DataTableComponent<T extends Record<string, unknown>>({
   );
 }
 
-// Memoize the component to prevent unnecessary re-renders
 export const DataTable = memo(DataTableComponent) as typeof DataTableComponent;
 
 export default DataTable;
