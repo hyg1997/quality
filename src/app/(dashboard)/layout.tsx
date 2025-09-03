@@ -3,6 +3,8 @@ import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { hasPermission, isAdmin, PERMISSIONS } from "@/lib/permissions";
+import { useIdleTimer } from "@/hooks/useIdleTimer";
+import { IdleWarning } from "@/components/ui/IdleWarning";
 import {
   Home,
   Users,
@@ -84,6 +86,43 @@ export default function DashboardLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [showIdleWarning, setShowIdleWarning] = useState(false);
+  const [warningRemainingTime, setWarningRemainingTime] = useState(0);
+
+  const handleLogout = async () => {
+    setIsSigningOut(true);
+    setShowIdleWarning(false);
+    try {
+      await signOut({
+        callbackUrl: '/auth/signin?message=session_expired',
+        redirect: true
+      });
+    } catch (error) {
+      console.error('Error during idle logout:', error);
+      window.location.href = '/auth/signin?message=session_expired';
+    }
+  };
+
+  // Auto logout after 1 minute of inactivity with 15-second warning
+  const { resetTimer } = useIdleTimer({
+    timeout: 60000, // 1 minute
+    warningTime: 15000, // 15 seconds warning
+    enabled: !!session && !isSigningOut,
+    onWarning: (remainingTime) => {
+      console.log(`Warning: ${remainingTime}ms remaining before logout`);
+      setWarningRemainingTime(remainingTime);
+      setShowIdleWarning(true);
+    },
+    onIdle: () => {
+      console.log('User has been idle for 1 minute. Logging out...');
+      handleLogout();
+    }
+  });
+
+  const handleExtendSession = () => {
+    setShowIdleWarning(false);
+    resetTimer();
+  };
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -354,6 +393,13 @@ export default function DashboardLayout({
           <div className="py-6">{children}</div>
         </main>
       </div>
+      
+      <IdleWarning
+        isVisible={showIdleWarning}
+        remainingTime={warningRemainingTime}
+        onExtendSession={handleExtendSession}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }

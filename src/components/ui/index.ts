@@ -3,6 +3,7 @@ export { default as Input } from "./Input";
 export { Card, CardHeader, CardContent, CardFooter } from "./Card";
 export { default as Badge } from "./Badge";
 export { Skeleton, SkeletonCard, SkeletonTable } from "./Skeleton";
+export { default as IdleWarning } from "./IdleWarning";
 export { Loading, PageLoading, InlineLoading } from "./Loading";
 export { Modal, ConfirmModal, FormModal } from "./Modal";
 export { DataTable } from "./DataTable";
