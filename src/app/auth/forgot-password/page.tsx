@@ -1,29 +1,23 @@
 "use client";
-
 import Link from "next/link";
 import { useActionState } from "react";
-
 type ForgotPasswordState = {
   error?: string;
   success?: boolean;
   message?: string;
 } | null;
-
 async function handleForgotPassword(
   prevState: ForgotPasswordState,
   formData: FormData
 ): Promise<ForgotPasswordState> {
   const email = formData.get("email") as string;
-
   if (!email) {
     return { error: "El email es requerido" };
   }
-
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return { error: "Formato de email inválido" };
   }
-
   try {
     const response = await fetch("/api/auth/forgot-password", {
       method: "POST",
@@ -32,9 +26,7 @@ async function handleForgotPassword(
       },
       body: JSON.stringify({ email }),
     });
-
     const data = await response.json();
-
     if (response.ok) {
       return {
         success: true,
@@ -48,13 +40,11 @@ async function handleForgotPassword(
     return { error: "Error de conexión. Inténtalo de nuevo." };
   }
 }
-
 export default function ForgotPassword() {
   const [state, formAction, isPending] = useActionState(
     handleForgotPassword,
     null
   );
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -66,7 +56,6 @@ export default function ForgotPassword() {
             Ingresa tu email para recibir un enlace de recuperación
           </p>
         </div>
-
         {state?.success ? (
           <div className="rounded-md bg-green-50 p-4">
             <div className="flex">
@@ -121,13 +110,11 @@ export default function ForgotPassword() {
                 disabled={isPending}
               />
             </div>
-
             {state?.error && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                 {state.error}
               </div>
             )}
-
             <div>
               <button
                 type="submit"
@@ -144,7 +131,6 @@ export default function ForgotPassword() {
                 )}
               </button>
             </div>
-
             <div className="text-center">
               <Link
                 href="/auth/signin"

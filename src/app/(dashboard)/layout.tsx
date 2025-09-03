@@ -1,5 +1,4 @@
 "use client";
-
 import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -16,7 +15,6 @@ import {
   Menu,
   ChevronLeft,
 } from "lucide-react";
-
 interface MenuItem {
   name: string;
   href: string;
@@ -24,7 +22,6 @@ interface MenuItem {
   permission?: string;
   adminOnly?: boolean;
 }
-
 const menuItems: MenuItem[] = [
   {
     name: "Dashboard",
@@ -75,7 +72,6 @@ const menuItems: MenuItem[] = [
     adminOnly: true,
   },
 ];
-
 export default function DashboardLayout({
   children,
 }: {
@@ -88,18 +84,15 @@ export default function DashboardLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-
   useEffect(() => {
     setMounted(true);
   }, []);
-
   useEffect(() => {
     if (status === "loading" || !mounted) return;
     if (!session) {
       router.replace("/auth/signin");
     }
   }, [session, status, mounted, router]);
-
   if (status === "loading" || !session || !mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -107,14 +100,12 @@ export default function DashboardLayout({
       </div>
     );
   }
-
   const filteredMenuItems = menuItems.filter((item) => {
     if (item.adminOnly && !isAdmin(session)) return false;
     if (item.permission && !hasPermission(session, item.permission))
       return false;
     return true;
   });
-
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
@@ -127,25 +118,23 @@ export default function DashboardLayout({
       setIsSigningOut(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar backdrop */}
+      {}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
-
-      {/* Sidebar */}
+      {}
       <div
         className={`fixed inset-y-0 left-0 z-50 bg-white shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 ${
           sidebarCollapsed ? "w-16" : "w-64"
         } ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
+          {}
           <div className="flex items-center justify-center h-16 px-4 bg-blue-600 relative">
             {sidebarCollapsed ? (
               <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
@@ -156,8 +145,7 @@ export default function DashboardLayout({
                 Control de Calidad
               </h1>
             )}
-
-            {/* Toggle button - only visible on desktop */}
+            {}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className="hidden lg:flex absolute -right-3 top-1/2 transform -translate-y-1/2 w-6 h-6 bg-blue-600 border-2 border-white rounded-full items-center justify-center hover:bg-blue-700 transition-colors"
@@ -169,20 +157,17 @@ export default function DashboardLayout({
               />
             </button>
           </div>
-
-          {/* Navigation */}
+          {}
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
             {filteredMenuItems.map((item) => {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/dashboard" && pathname.startsWith(item.href));
-
               const handleNavigation = (e: React.MouseEvent) => {
                 e.preventDefault();
                 setSidebarOpen(false);
                 router.push(item.href);
               };
-
               return (
                 <button
                   key={item.href}
@@ -209,8 +194,7 @@ export default function DashboardLayout({
                       )}
                     </>
                   )}
-
-                  {/* Tooltip for collapsed state */}
+                  {}
                   {sidebarCollapsed && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                       {item.name}
@@ -220,8 +204,7 @@ export default function DashboardLayout({
               );
             })}
           </nav>
-
-          {/* User info */}
+          {}
           <div className="p-4 border-t border-gray-200">
             {sidebarCollapsed ? (
               <div className="flex flex-col items-center space-y-3">
@@ -229,7 +212,7 @@ export default function DashboardLayout({
                   <span className="text-white font-medium text-sm">
                     {session.user.fullName?.charAt(0).toUpperCase()}
                   </span>
-                  {/* User tooltip */}
+                  {}
                   <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                     {session.user.fullName}
                   </div>
@@ -245,7 +228,7 @@ export default function DashboardLayout({
                   ) : (
                     <LogOut className="h-4 w-4" />
                   )}
-                  {/* Logout tooltip */}
+                  {}
                   <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                     Cerrar Sesión
                   </div>
@@ -292,14 +275,13 @@ export default function DashboardLayout({
           </div>
         </div>
       </div>
-
-      {/* Main content */}
+      {}
       <div
         className={`transition-all duration-300 ${
           sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"
         }`}
       >
-        {/* Top header */}
+        {}
         <header className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
           <div className="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
             <div className="flex items-center">
@@ -347,8 +329,7 @@ export default function DashboardLayout({
                 )}
               </div>
             </div>
-
-            {/* User menu - desktop */}
+            {}
             <div className="hidden sm:flex sm:items-center sm:space-x-4">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
@@ -368,8 +349,7 @@ export default function DashboardLayout({
             </div>
           </div>
         </header>
-
-        {/* Page content */}
+        {}
         <main className="flex-1">
           <div className="py-6">{children}</div>
         </main>

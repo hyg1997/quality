@@ -1,6 +1,4 @@
 import { apiClient, type ApiResponse } from "./base";
-
-// Types for Parameter API
 export interface Parameter {
   id: string;
   productId: string;
@@ -20,7 +18,6 @@ export interface Parameter {
     code?: string;
   };
 }
-
 export interface CreateParameterData {
   productId: string;
   masterParameterId?: string;
@@ -33,7 +30,6 @@ export interface CreateParameterData {
   required?: boolean;
   active?: boolean;
 }
-
 export interface UpdateParameterData {
   productId?: string;
   name?: string;
@@ -45,7 +41,6 @@ export interface UpdateParameterData {
   required?: boolean;
   active?: boolean;
 }
-
 export interface ParametersQueryParams {
   page?: number;
   limit?: number;
@@ -54,12 +49,7 @@ export interface ParametersQueryParams {
   type?: string;
   active?: boolean;
 }
-
-// Parameter API Service
 export class ParameterService {
-  /**
-   * Get all parameters with pagination and filters
-   */
   async getParameters(params?: ParametersQueryParams): Promise<
     ApiResponse<{
       parameters: Parameter[];
@@ -69,7 +59,6 @@ export class ParameterService {
     }>
   > {
     const searchParams = new URLSearchParams();
-
     if (params?.page) searchParams.set("page", params.page.toString());
     if (params?.limit) searchParams.set("limit", params.limit.toString());
     if (params?.search) searchParams.set("search", params.search);
@@ -77,10 +66,8 @@ export class ParameterService {
     if (params?.type) searchParams.set("type", params.type);
     if (params?.active !== undefined)
       searchParams.set("active", params.active.toString());
-
     const queryString = searchParams.toString();
     const url = `/api/parameters${queryString ? `?${queryString}` : ""}`;
-
     return apiClient.get<{
       parameters: Parameter[];
       total: number;
@@ -88,10 +75,6 @@ export class ParameterService {
       limit: number;
     }>(url);
   }
-
-  /**
-   * Get parameters by product ID
-   */
   async getParametersByProduct(
     productId: string
   ): Promise<
@@ -109,53 +92,29 @@ export class ParameterService {
       limit: number;
     }>(`/api/parameters?productId=${productId}&limit=1000`);
   }
-
-  /**
-   * Get a single parameter by ID
-   */
   async getParameter(id: string): Promise<ApiResponse<Parameter>> {
     return apiClient.get<Parameter>(`/api/parameters/${id}`);
   }
-
-  /**
-   * Create a new parameter
-   */
   async createParameter(
     data: CreateParameterData
   ): Promise<ApiResponse<Parameter>> {
     return apiClient.post<Parameter>("/api/parameters", data);
   }
-
-  /**
-   * Update an existing parameter
-   */
   async updateParameter(
     id: string,
     data: UpdateParameterData
   ): Promise<ApiResponse<Parameter>> {
     return apiClient.put<Parameter>(`/api/parameters/${id}`, data);
   }
-
-  /**
-   * Delete a parameter
-   */
   async deleteParameter(id: string): Promise<ApiResponse<void>> {
     return apiClient.delete(`/api/parameters/${id}`);
   }
-
-  /**
-   * Toggle parameter active status
-   */
   async toggleParameterStatus(
     id: string,
     active: boolean
   ): Promise<ApiResponse<Parameter>> {
     return apiClient.put<Parameter>(`/api/parameters/${id}`, { active });
   }
-
-  /**
-   * Validate parameter value against its configuration
-   */
   async validateParameterValue(
     parameterId: string,
     value: string | number
@@ -172,10 +131,6 @@ export class ParameterService {
       outOfRange?: boolean;
     }>(`/api/parameters/${parameterId}/validate`, { value });
   }
-
-  /**
-   * Get parameter statistics
-   */
   async getParameterStats(): Promise<
     ApiResponse<{
       total: number;
@@ -201,10 +156,6 @@ export class ParameterService {
       }>;
     }>("/api/parameters/stats");
   }
-
-  /**
-   * Duplicate parameters from one product to another
-   */
   async duplicateParameters(
     fromProductId: string,
     toProductId: string
@@ -215,5 +166,4 @@ export class ParameterService {
     });
   }
 }
-
 export const parameterService = new ParameterService();

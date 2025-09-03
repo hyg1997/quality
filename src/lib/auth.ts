@@ -4,7 +4,6 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { Adapter } from "next-auth/adapters";
-
 type AuthUser = {
   id: string;
   email: string;
@@ -27,7 +26,6 @@ type AuthUser = {
   requires2FA: boolean;
   twoFactorSecret?: string;
 };
-
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
   providers: [
@@ -41,9 +39,7 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.username || !credentials?.password) {
           return null;
         }
-
         try {
-          // Find user with roles and permissions
           const user = await prisma.user.findFirst({
             where: {
               OR: [
@@ -68,21 +64,16 @@ export const authOptions: NextAuthOptions = {
               },
             },
           });
-
           if (!user || !user.password) {
             return null;
           }
-
           const isPasswordValid = await bcrypt.compare(
             credentials.password,
             user.password
           );
-
           if (!isPasswordValid) {
             return null;
           }
-
-          // Extract roles and permissions from database
           const userRoles = user.userRoles.map(
             (ur: {
               role: {
@@ -98,8 +89,6 @@ export const authOptions: NextAuthOptions = {
               level: ur.role.level,
             })
           );
-
-          // Flatten permissions from all roles and remove duplicates
           const allPermissions = user.userRoles.flatMap(
             (ur: {
               role: {
@@ -132,8 +121,6 @@ export const authOptions: NextAuthOptions = {
                 })
               )
           );
-
-          // Remove duplicate permissions
           const uniquePermissions = allPermissions.filter(
             (
               permission: { name: string },
@@ -141,7 +128,6 @@ export const authOptions: NextAuthOptions = {
               self: Array<{ name: string }>
             ) => index === self.findIndex((p) => p.name === permission.name)
           );
-
           const authUser: AuthUser = {
             id: user.id,
             email: user.email,
@@ -153,7 +139,6 @@ export const authOptions: NextAuthOptions = {
             requires2FA: user.twoFactorEnabled && !!user.twoFactorSecret,
             twoFactorSecret: user.twoFactorSecret || undefined,
           };
-
           return authUser;
         } catch (error) {
           console.error("Error en autenticación:", error);
@@ -164,7 +149,7 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 24 * 60 * 60, // 24 horas
+    maxAge: 24 * 60 * 60,
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -199,8 +184,6 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
-
-// Extended types for NextAuth with modern RBAC
 declare module "next-auth" {
   interface User {
     id: string;
@@ -224,7 +207,6 @@ declare module "next-auth" {
     requires2FA: boolean;
     twoFactorSecret?: string;
   }
-
   interface Session {
     user: {
       id: string;
@@ -250,7 +232,6 @@ declare module "next-auth" {
     };
   }
 }
-
 declare module "next-auth/jwt" {
   interface JWT {
     username: string | null;

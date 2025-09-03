@@ -1,23 +1,18 @@
 "use client"
-
 import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
 import Image from "next/image"
-
-
 interface TwoFactorStatus {
   enabled: boolean
   hasSecret: boolean
   isAdmin: boolean
 }
-
 interface SetupResponse {
   secret: string
   qrCode: string
   manualEntryKey: string
   message: string
 }
-
 export default function TwoFactorAuthPage() {
   const { data: session, status } = useSession()
   const [twoFactorStatus, setTwoFactorStatus] = useState<TwoFactorStatus | null>(null)
@@ -29,13 +24,11 @@ export default function TwoFactorAuthPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [showDisableForm, setShowDisableForm] = useState(false)
-
   useEffect(() => {
     if (session) {
       fetchTwoFactorStatus()
     }
   }, [session])
-
   const fetchTwoFactorStatus = async () => {
     try {
       const response = await fetch('/api/auth/2fa/setup')
@@ -47,19 +40,15 @@ export default function TwoFactorAuthPage() {
       console.error('Error fetching 2FA status')
     }
   }
-
   const handleSetup2FA = async () => {
     setLoading(true)
     setError('')
     setMessage('')
-
     try {
       const response = await fetch('/api/auth/2fa/setup', {
         method: 'POST'
       })
-
       const data = await response.json()
-
       if (response.ok) {
         setSetupData(data)
         setMessage(data.message)
@@ -72,17 +61,14 @@ export default function TwoFactorAuthPage() {
       setLoading(false)
     }
   }
-
   const handleVerify2FA = async () => {
     if (!verificationCode) {
       setError('Ingresa el código de verificación')
       return
     }
-
     setLoading(true)
     setError('')
     setMessage('')
-
     try {
       const response = await fetch('/api/auth/2fa/verify', {
         method: 'POST',
@@ -91,9 +77,7 @@ export default function TwoFactorAuthPage() {
         },
         body: JSON.stringify({ token: verificationCode })
       })
-
       const data = await response.json()
-
       if (response.ok) {
         setMessage(data.message)
         setSetupData(null)
@@ -108,17 +92,14 @@ export default function TwoFactorAuthPage() {
       setLoading(false)
     }
   }
-
   const handleDisable2FA = async () => {
     if (!disableCode || !disablePassword) {
       setError('Ingresa el código 2FA y tu contraseña actual')
       return
     }
-
     setLoading(true)
     setError('')
     setMessage('')
-
     try {
       const response = await fetch('/api/auth/2fa/disable', {
         method: 'POST',
@@ -130,9 +111,7 @@ export default function TwoFactorAuthPage() {
           password: disablePassword
         })
       })
-
       const data = await response.json()
-
       if (response.ok) {
         setMessage(data.message)
         setShowDisableForm(false)
@@ -148,7 +127,6 @@ export default function TwoFactorAuthPage() {
       setLoading(false)
     }
   }
-
   if (status === "loading" || !session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -156,7 +134,6 @@ export default function TwoFactorAuthPage() {
       </div>
     )
   }
-
   if (twoFactorStatus?.isAdmin) {
     return (
       <div className="space-y-6 px-4 sm:px-6 lg:px-8">
@@ -180,18 +157,16 @@ export default function TwoFactorAuthPage() {
       </div>
     )
   }
-
   return (
     <div className="space-y-6 px-4 sm:px-6 lg:px-8">
-      {/* Header */}
+      {}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Autenticación de Dos Factores</h1>
         <p className="mt-1 text-sm text-gray-600">
           Agrega una capa adicional de seguridad a tu cuenta
         </p>
       </div>
-
-      {/* Messages */}
+      {}
       {message && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex">
@@ -206,7 +181,6 @@ export default function TwoFactorAuthPage() {
           </div>
         </div>
       )}
-
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex">
@@ -221,8 +195,7 @@ export default function TwoFactorAuthPage() {
           </div>
         </div>
       )}
-
-      {/* Status Card */}
+      {}
       <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -243,8 +216,7 @@ export default function TwoFactorAuthPage() {
           </div>
         </div>
       </div>
-
-      {/* Setup 2FA */}
+      {}
       {!twoFactorStatus?.enabled && !setupData && (
         <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Configurar Autenticación de Dos Factores</h3>
@@ -261,12 +233,10 @@ export default function TwoFactorAuthPage() {
           </button>
         </div>
       )}
-
-      {/* QR Code and Verification */}
+      {}
       {setupData && (
         <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Escanea el Código QR</h3>
-          
           <div className="space-y-6">
             <div className="text-center">
               <Image 
@@ -277,7 +247,6 @@ export default function TwoFactorAuthPage() {
                 className="mx-auto border border-gray-200 rounded-lg"
               />
             </div>
-            
             <div>
               <p className="text-sm text-gray-600 mb-2">
                 Si no puedes escanear el código QR, ingresa manualmente esta clave:
@@ -286,7 +255,6 @@ export default function TwoFactorAuthPage() {
                 <code className="text-sm font-mono break-all">{setupData.manualEntryKey}</code>
               </div>
             </div>
-            
             <div>
               <label htmlFor="verification-code" className="block text-sm font-medium text-gray-700 mb-2">
                 Código de Verificación
@@ -301,7 +269,6 @@ export default function TwoFactorAuthPage() {
                 maxLength={6}
               />
             </div>
-            
             <button
               onClick={handleVerify2FA}
               disabled={loading || !verificationCode}
@@ -312,12 +279,10 @@ export default function TwoFactorAuthPage() {
           </div>
         </div>
       )}
-
-      {/* Disable 2FA */}
+      {}
       {twoFactorStatus?.enabled && (
         <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Deshabilitar Autenticación de Dos Factores</h3>
-          
           {!showDisableForm ? (
             <div>
               <p className="text-sm text-gray-600 mb-4">
@@ -345,7 +310,6 @@ export default function TwoFactorAuthPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-              
               <div>
                 <label htmlFor="disable-code" className="block text-sm font-medium text-gray-700 mb-2">
                   Código de Verificación 2FA
@@ -360,7 +324,6 @@ export default function TwoFactorAuthPage() {
                   maxLength={6}
                 />
               </div>
-              
               <div className="flex space-x-3">
                 <button
                   onClick={handleDisable2FA}

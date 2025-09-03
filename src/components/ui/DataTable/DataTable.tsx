@@ -1,10 +1,8 @@
 "use client";
-
 import { ReactNode, useCallback, memo } from "react";
 import { ArrowLeft, ArrowRight, Menu, Search, X } from "lucide-react";
 import Button from "../Button";
 import { cn } from "@/lib/utils";
-
 export interface ColumnDef<T> {
   key: keyof T | string;
   header: string;
@@ -13,7 +11,6 @@ export interface ColumnDef<T> {
   className?: string;
   width?: string;
 }
-
 export interface ActionDef<T> {
   label: string;
   onClick: (item: T) => void;
@@ -22,7 +19,6 @@ export interface ActionDef<T> {
   disabled?: (item: T) => boolean;
   hidden?: (item: T) => boolean;
 }
-
 interface DataTableProps<T> {
   data: T[];
   columns: ColumnDef<T>[];
@@ -46,7 +42,6 @@ interface DataTableProps<T> {
     isSearching?: boolean;
   };
 }
-
 function DataTableComponent<T extends Record<string, unknown>>({
   data,
   columns,
@@ -62,15 +57,12 @@ function DataTableComponent<T extends Record<string, unknown>>({
     if (column.cell) {
       return column.cell(item);
     }
-
     const value = item[column.key as keyof T];
     if (value === null || value === undefined) {
       return "-";
     }
-
     return String(value);
   }, []);
-
   const getVisibleActions = useCallback(
     (item: T) => {
       if (!actions) return [];
@@ -78,7 +70,6 @@ function DataTableComponent<T extends Record<string, unknown>>({
     },
     [actions]
   );
-
   return (
     <div
       className={cn(
@@ -86,7 +77,7 @@ function DataTableComponent<T extends Record<string, unknown>>({
         className
       )}
     >
-      {/* Barra de búsqueda */}
+      {}
       {search && (
         <div className="p-4 border-b border-gray-200 bg-gray-50">
           <div className="relative max-w-md">
@@ -120,8 +111,7 @@ function DataTableComponent<T extends Record<string, unknown>>({
           </div>
         </div>
       )}
-
-      {/* Tabla con headers fijos */}
+      {}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
@@ -145,8 +135,7 @@ function DataTableComponent<T extends Record<string, unknown>>({
               )}
             </tr>
           </thead>
-
-          {/* Contenido dinámico del tbody */}
+          {}
           {loading ? (
             <tbody>
               {[...Array(5)].map((_, index) => (
@@ -189,7 +178,6 @@ function DataTableComponent<T extends Record<string, unknown>>({
             <tbody className="divide-y divide-gray-200">
               {data.map((item, rowIndex) => {
                 const visibleActions = getVisibleActions(item);
-
                 return (
                   <tr
                     key={rowIndex}
@@ -238,7 +226,6 @@ function DataTableComponent<T extends Record<string, unknown>>({
           )}
         </table>
       </div>
-
       {pagination && (
         <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
           <div className="text-sm text-gray-700">
@@ -281,7 +268,5 @@ function DataTableComponent<T extends Record<string, unknown>>({
     </div>
   );
 }
-
 export const DataTable = memo(DataTableComponent) as typeof DataTableComponent;
-
 export default DataTable;

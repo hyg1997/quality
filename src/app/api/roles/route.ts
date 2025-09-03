@@ -3,23 +3,16 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { hasPermission, isAdmin, PERMISSIONS } from '@/lib/permissions'
-
-// GET /api/roles - Obtener todos los roles
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session || !hasPermission(session, PERMISSIONS.USERS?.READ)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    // Obtener parámetros de búsqueda
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
-
-    // Construir condiciones de búsqueda
     const whereConditions: {
       OR?: Array<{
         name?: { contains: string };
@@ -27,7 +20,6 @@ export async function GET(request: NextRequest) {
         description?: { contains: string };
       }>;
     } = {}
-    
     if (search && search.trim().length > 0) {
       whereConditions.OR = [
         {
@@ -47,7 +39,6 @@ export async function GET(request: NextRequest) {
         }
       ]
     }
-
     const roles = await prisma.role.findMany({
       where: whereConditions,
       include: {
@@ -68,7 +59,6 @@ export async function GET(request: NextRequest) {
       take: limit,
       skip: offset
     })
-
     const formattedRoles = roles.map(role => ({
       id: role.id,
       name: role.name,
@@ -77,53 +67,40 @@ export async function GET(request: NextRequest) {
       level: role.level,
       permissions: role.rolePermissions.map(rp => rp.permission),
       userCount: role._count.userRoles,
-      isProtected: role.level >= 80 // Admin roles are protected
+      isProtected: role.level >= 80
     }))
-
     return NextResponse.json(formattedRoles)
   } catch (error) {
     console.error('Error fetching roles:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
-// POST /api/roles - Crear nuevo rol
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session || !isAdmin(session)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
     const { name, displayName, description, level, permissions } = await request.json()
-
     if (!name || !displayName || level === undefined) {
       return NextResponse.json({ 
         error: 'Name, displayName and level are required' 
       }, { status: 400 })
     }
-
-    // Convertir level a número
     const levelNumber = parseInt(level, 10)
     if (isNaN(levelNumber)) {
       return NextResponse.json({ 
         error: 'Level must be a valid number' 
       }, { status: 400 })
     }
-
-    // Verificar que el nombre del rol no exista
     const existingRole = await prisma.role.findUnique({
       where: { name }
     })
-
     if (existingRole) {
       return NextResponse.json({ 
         error: 'Role name already exists' 
       }, { status: 400 })
     }
-
-    // Crear el rol
     const role = await prisma.role.create({
       data: {
         name,
@@ -132,10 +109,7 @@ export async function POST(request: NextRequest) {
         level: levelNumber
       }
     })
-
-    // Asignar permisos si se proporcionaron
     if (permissions && permissions.length > 0) {
-      // Verificar que los permisos existen
       const existingPermissions = await prisma.permission.findMany({
         where: {
           id: {
@@ -143,7 +117,6 @@ export async function POST(request: NextRequest) {
           }
         }
       })
-
       if (existingPermissions.length > 0) {
         await prisma.rolePermission.createMany({
           data: existingPermissions.map((permission) => ({
@@ -153,8 +126,6 @@ export async function POST(request: NextRequest) {
         })
       }
     }
-
-    // Crear log de auditoría
     await prisma.auditLog.create({
       data: {
         userId: session.user.id,
@@ -167,7 +138,6 @@ export async function POST(request: NextRequest) {
         })
       }
     })
-
     return NextResponse.json(role, { status: 201 })
   } catch (error) {
     console.error('Error creating role:', error)

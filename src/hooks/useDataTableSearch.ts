@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearch } from "./useSearch";
-
 interface UseDataTableSearchOptions<T> {
   fetchData: (searchTerm?: string) => Promise<T[]>;
   debounceMs?: number;
   minLength?: number;
   placeholder?: string;
 }
-
 interface UseDataTableSearchReturn<T> {
   data: T[];
   loading: boolean;
@@ -20,7 +18,6 @@ interface UseDataTableSearchReturn<T> {
   };
   refetch: () => Promise<void>;
 }
-
 export function useDataTableSearch<T>({
   fetchData,
   debounceMs = 500,
@@ -29,7 +26,6 @@ export function useDataTableSearch<T>({
 }: UseDataTableSearchOptions<T>): UseDataTableSearchReturn<T> {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
-
   const {
     searchTerm,
     debouncedSearchTerm,
@@ -37,10 +33,8 @@ export function useDataTableSearch<T>({
     clearSearch,
     isSearching,
   } = useSearch({ debounceMs, minLength });
-
   const fetchDataRef = useRef(fetchData);
   fetchDataRef.current = fetchData;
-
   const loadData = useCallback(async (searchValue?: string) => {
     setLoading(true);
     try {
@@ -53,11 +47,9 @@ export function useDataTableSearch<T>({
       setLoading(false);
     }
   }, []);
-
   useEffect(() => {
     loadData();
   }, [loadData]);
-
   useEffect(() => {
     if (debouncedSearchTerm) {
       loadData(debouncedSearchTerm);
@@ -65,16 +57,13 @@ export function useDataTableSearch<T>({
       loadData();
     }
   }, [debouncedSearchTerm, searchTerm, loadData]);
-
   const handleClear = useCallback(() => {
     clearSearch();
     loadData();
   }, [clearSearch, loadData]);
-
   const refetch = useCallback(async () => {
     await loadData(debouncedSearchTerm || undefined);
   }, [loadData, debouncedSearchTerm]);
-
   return {
     data,
     loading,
@@ -88,5 +77,4 @@ export function useDataTableSearch<T>({
     refetch,
   };
 }
-
 export default useDataTableSearch;

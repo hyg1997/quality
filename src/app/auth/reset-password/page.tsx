@@ -1,16 +1,13 @@
 "use client";
-
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useActionState } from "react";
-
 type ResetPasswordState = {
   error?: string;
   success?: boolean;
   message?: string;
 } | null;
-
 async function handleResetPassword(
   prevState: ResetPasswordState,
   formData: FormData
@@ -18,19 +15,15 @@ async function handleResetPassword(
   const token = formData.get("token") as string;
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
-
   if (!token || !password || !confirmPassword) {
     return { error: "Todos los campos son requeridos" };
   }
-
   if (password !== confirmPassword) {
     return { error: "Las contraseñas no coinciden" };
   }
-
   if (password.length < 8) {
     return { error: "La contraseña debe tener al menos 8 caracteres" };
   }
-
   try {
     const response = await fetch("/api/auth/reset-password", {
       method: "POST",
@@ -39,9 +32,7 @@ async function handleResetPassword(
       },
       body: JSON.stringify({ token, password }),
     });
-
     const data = await response.json();
-
     if (response.ok) {
       return {
         success: true,
@@ -55,7 +46,6 @@ async function handleResetPassword(
     return { error: "Error de conexión. Inténtalo de nuevo." };
   }
 }
-
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -65,18 +55,15 @@ function ResetPasswordForm() {
   );
   const [token, setToken] = useState<string | null>(null);
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
-
   useEffect(() => {
     const tokenParam = searchParams.get("token");
     if (tokenParam) {
       setToken(tokenParam);
-
       verifyToken(tokenParam);
     } else {
       setTokenValid(false);
     }
   }, [searchParams]);
-
   const verifyToken = async (tokenToVerify: string) => {
     try {
       const response = await fetch("/api/auth/verify-reset-token", {
@@ -86,13 +73,11 @@ function ResetPasswordForm() {
         },
         body: JSON.stringify({ token: tokenToVerify }),
       });
-
       setTokenValid(response.ok);
     } catch {
       setTokenValid(false);
     }
   };
-
   useEffect(() => {
     if (state?.success) {
       const timer = setTimeout(() => {
@@ -101,7 +86,6 @@ function ResetPasswordForm() {
       return () => clearTimeout(timer);
     }
   }, [state?.success, router]);
-
   if (tokenValid === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -109,7 +93,6 @@ function ResetPasswordForm() {
       </div>
     );
   }
-
   if (tokenValid === false) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -134,7 +117,6 @@ function ResetPasswordForm() {
       </div>
     );
   }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -146,7 +128,6 @@ function ResetPasswordForm() {
             Ingresa tu nueva contraseña
           </p>
         </div>
-
         {state?.success ? (
           <div className="rounded-md bg-green-50 p-4">
             <div className="flex">
@@ -187,7 +168,6 @@ function ResetPasswordForm() {
         ) : (
           <form className="mt-8 space-y-6" action={formAction}>
             <input type="hidden" name="token" value={token || ""} />
-
             <div className="space-y-4">
               <div>
                 <label
@@ -208,7 +188,6 @@ function ResetPasswordForm() {
                   disabled={isPending}
                 />
               </div>
-
               <div>
                 <label
                   htmlFor="confirmPassword"
@@ -229,13 +208,11 @@ function ResetPasswordForm() {
                 />
               </div>
             </div>
-
             {state?.error && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                 {state.error}
               </div>
             )}
-
             <div>
               <button
                 type="submit"
@@ -252,7 +229,6 @@ function ResetPasswordForm() {
                 )}
               </button>
             </div>
-
             <div className="text-center">
               <Link
                 href="/auth/signin"
@@ -267,7 +243,6 @@ function ResetPasswordForm() {
     </div>
   );
 }
-
 export default function ResetPassword() {
   return (
     <Suspense

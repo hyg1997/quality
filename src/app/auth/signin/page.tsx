@@ -1,11 +1,9 @@
 "use client";
-
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActionState, Suspense } from "react";
 import { Button, Input, Card, CardContent } from "@/components/ui";
 import { Factory, Lock } from "lucide-react";
-
 type LoginState = {
   error?: string;
   success?: boolean;
@@ -13,18 +11,15 @@ type LoginState = {
   username?: string;
   password?: string;
 } | null;
-
 async function handleLogin(
   _: LoginState,
   formData: FormData
 ): Promise<LoginState> {
   const username = formData.get("username") as string;
   const password = formData.get("password") as string;
-
   if (!username || !password) {
     return { error: "Todos los campos son requeridos" };
   }
-
   try {
     const checkResponse = await fetch("/api/auth/2fa/check-required", {
       method: "POST",
@@ -33,10 +28,8 @@ async function handleLogin(
       },
       body: JSON.stringify({ username, password }),
     });
-
     if (checkResponse.ok) {
       const checkData = await checkResponse.json();
-
       if (checkData.requires2FA) {
         return {
           error: undefined,
@@ -47,36 +40,29 @@ async function handleLogin(
         };
       }
     }
-
     const result = await signIn("credentials", {
       username,
       password,
       redirect: false,
     });
-
     if (result?.error) {
       return { error: "Credenciales incorrectas" };
     }
-
     if (result?.ok) {
       return { success: true };
     }
-
     return { error: "Error desconocido" };
   } catch {
     return { error: "Error de conexión" };
   }
 }
-
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [state, formAction, isPending] = useActionState(handleLogin, null);
-
   if (state?.success) {
     router.push("/dashboard");
   }
-
   if (state?.requires2FA && state.username && state.password) {
     const params = new URLSearchParams({
       username: state.username,
@@ -85,7 +71,6 @@ function SignInContent() {
     });
     router.push(`/auth/2fa-verify?${params.toString()}`);
   }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -98,7 +83,6 @@ function SignInContent() {
             Sistema de Control de Calidad
           </p>
         </div>
-
         <Card className="mt-8 shadow-lg">
           <CardContent className="p-8">
             <form className="space-y-6" action={formAction}>
@@ -122,19 +106,16 @@ function SignInContent() {
                   required
                 />
               </div>
-
               {state?.error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                   {state.error}
                 </div>
               )}
-
               {searchParams.get("error") && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                   Error de autenticación
                 </div>
               )}
-
               <div className="space-y-4">
                 <Button
                   type="submit"
@@ -144,7 +125,6 @@ function SignInContent() {
                 >
                   {isPending ? "Iniciando sesión..." : "Iniciar Sesión"}
                 </Button>
-
                 <div className="text-center">
                   <a
                     href="/auth/forgot-password"
@@ -161,7 +141,6 @@ function SignInContent() {
     </div>
   );
 }
-
 export default function SignIn() {
   return (
     <Suspense

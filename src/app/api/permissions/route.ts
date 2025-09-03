@@ -3,16 +3,12 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { hasPermission, PERMISSIONS } from '@/lib/permissions'
-
-// GET /api/permissions - Obtener todos los permisos
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session || !hasPermission(session, PERMISSIONS.USERS?.READ)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
     const permissions = await prisma.permission.findMany({
       include: {
         _count: {
@@ -26,7 +22,6 @@ export async function GET() {
         { action: 'asc' }
       ]
     })
-
     const formattedPermissions = permissions.map(permission => ({
       id: permission.id,
       name: permission.name,
@@ -36,8 +31,6 @@ export async function GET() {
       action: permission.action,
       roleCount: permission._count.rolePermissions
     }))
-
-    // Agrupar por recurso
     const groupedPermissions = formattedPermissions.reduce((acc, permission) => {
       const resource = permission.resource
       if (!acc[resource]) {
@@ -46,7 +39,6 @@ export async function GET() {
       acc[resource].push(permission)
       return acc
     }, {} as Record<string, typeof formattedPermissions>)
-
     return NextResponse.json({
       permissions: formattedPermissions,
       grouped: groupedPermissions

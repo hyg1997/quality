@@ -1,5 +1,4 @@
 "use client";
-
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Shield, Users, Plus, Edit, Trash2 } from "lucide-react";
@@ -21,7 +20,6 @@ import { useModal, useConfirmModal } from "@/hooks/useModal";
 import { useForm } from "@/hooks/useForm";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useDataTableSearch } from "@/hooks/useDataTableSearch";
-
 interface Role extends Record<string, unknown> {
   id: string;
   name: string;
@@ -32,7 +30,6 @@ interface Role extends Record<string, unknown> {
   userCount: number;
   isProtected: boolean;
 }
-
 interface Permission {
   id: string;
   name: string;
@@ -41,7 +38,6 @@ interface Permission {
   resource: string;
   action: string;
 }
-
 interface RoleFormData extends Record<string, unknown> {
   name: string;
   displayName: string;
@@ -49,18 +45,15 @@ interface RoleFormData extends Record<string, unknown> {
   level: number;
   permissions: string[];
 }
-
 export default function RolesManagementPage() {
   const { data: session, status } = useSession();
   const { isAdmin, hasPermission } = usePermissions();
   const { success, error } = useNotifications();
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
-
   const createModal = useModal<Role>();
   const editModal = useModal<Role>();
   const confirmModal = useConfirmModal();
-
   const {
     data: roles,
     loading,
@@ -72,17 +65,14 @@ export default function RolesManagementPage() {
       if (searchTerm) {
         url.searchParams.set("search", searchTerm);
       }
-
       const response = await fetch(url.toString());
       if (!response.ok) {
         throw new Error("Error fetching roles");
       }
-
       return response.json();
     },
     placeholder: "Buscar roles por nombre o descripción...",
   });
-
   const fetchPermissions = useCallback(async () => {
     setPermissionsLoading(true);
     try {
@@ -99,13 +89,11 @@ export default function RolesManagementPage() {
       setPermissionsLoading(false);
     }
   }, []);
-
   useEffect(() => {
     if (session && hasPermission("roles:read")) {
       fetchPermissions();
     }
   }, [session, hasPermission, fetchPermissions]);
-
   const handleCreateRole = useCallback(
     async (data: RoleFormData) => {
       try {
@@ -122,7 +110,6 @@ export default function RolesManagementPage() {
             permissions: data.permissions,
           }),
         });
-
         if (response.ok) {
           createModal.close();
           await refetchRoles();
@@ -143,11 +130,9 @@ export default function RolesManagementPage() {
     },
     [createModal, refetchRoles, success, error]
   );
-
   const handleEditRole = useCallback(
     async (data: RoleFormData) => {
       if (!editModal.data) return;
-
       try {
         const response = await fetch(`/api/roles/${editModal.data.id}`, {
           method: "PUT",
@@ -162,7 +147,6 @@ export default function RolesManagementPage() {
             permissions: data.permissions,
           }),
         });
-
         if (response.ok) {
           editModal.close();
           await refetchRoles();
@@ -183,14 +167,12 @@ export default function RolesManagementPage() {
     },
     [editModal, refetchRoles, success, error]
   );
-
   const handleDeleteRole = useCallback(
     async (role: Role) => {
       try {
         const response = await fetch(`/api/roles/${role.id}`, {
           method: "DELETE",
         });
-
         if (response.ok) {
           await refetchRoles();
           success(
@@ -210,7 +192,6 @@ export default function RolesManagementPage() {
     },
     [refetchRoles, success, error]
   );
-
   const columns: ColumnDef<Role>[] = useMemo(
     () => [
       {
@@ -271,7 +252,6 @@ export default function RolesManagementPage() {
     ],
     []
   );
-
   const actions: ActionDef<Role>[] = useMemo(
     () => [
       {
@@ -299,7 +279,6 @@ export default function RolesManagementPage() {
     ],
     [editModal, confirmModal, handleDeleteRole, hasPermission]
   );
-
   if (status === "loading" || permissionsLoading) {
     return (
       <PageLayout title="Gestión de Roles">
@@ -322,7 +301,6 @@ export default function RolesManagementPage() {
       </PageLayout>
     );
   }
-
   if (!session || !isAdmin) {
     return (
       <PageLayout title="Acceso Denegado">
@@ -340,7 +318,6 @@ export default function RolesManagementPage() {
       </PageLayout>
     );
   }
-
   return (
     <>
       <PageLayout
@@ -364,8 +341,7 @@ export default function RolesManagementPage() {
           search={searchProps}
         />
       </PageLayout>
-
-      {/* Modal para crear rol */}
+      {}
       <RoleFormModal
         isOpen={createModal.isOpen}
         onClose={createModal.close}
@@ -373,8 +349,7 @@ export default function RolesManagementPage() {
         permissions={permissions}
         title="Crear Nuevo Rol"
       />
-
-      {/* Modal para editar rol */}
+      {}
       <RoleFormModal
         isOpen={editModal.isOpen}
         onClose={editModal.close}
@@ -383,8 +358,7 @@ export default function RolesManagementPage() {
         role={editModal.data}
         title="Editar Rol"
       />
-
-      {/* Modal de confirmación */}
+      {}
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
@@ -398,7 +372,6 @@ export default function RolesManagementPage() {
     </>
   );
 }
-
 interface RoleFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -407,7 +380,6 @@ interface RoleFormModalProps {
   role?: Role;
   title: string;
 }
-
 function RoleFormModal({
   isOpen,
   onClose,
@@ -433,7 +405,6 @@ function RoleFormModal({
       await onSubmit(data);
     },
   });
-
   const handlePermissionChange = (permissionId: string, checked: boolean) => {
     const currentPermissions = form.values.permissions as string[];
     if (checked) {
@@ -445,7 +416,6 @@ function RoleFormModal({
       );
     }
   };
-
   const groupedPermissions = permissions.reduce((acc, permission) => {
     if (!acc[permission.resource]) {
       acc[permission.resource] = [];
@@ -453,7 +423,6 @@ function RoleFormModal({
     acc[permission.resource].push(permission);
     return acc;
   }, {} as Record<string, Permission[]>);
-
   return (
     <FormModal
       isOpen={isOpen}
@@ -465,7 +434,7 @@ function RoleFormModal({
       submitText={role ? "Actualizar Rol" : "Crear Rol"}
     >
       <div className="space-y-6">
-        {/* Información básica del rol */}
+        {}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -484,7 +453,6 @@ function RoleFormModal({
               <p className="text-red-500 text-sm mt-1">{form.errors.name}</p>
             )}
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nombre para Mostrar *
@@ -505,7 +473,6 @@ function RoleFormModal({
             )}
           </div>
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Descripción
@@ -520,7 +487,6 @@ function RoleFormModal({
             name="description"
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Nivel de Autoridad *
@@ -547,8 +513,7 @@ function RoleFormModal({
             <p className="text-red-500 text-sm mt-1">{form.errors.level}</p>
           )}
         </div>
-
-        {/* Permisos agrupados por recurso */}
+        {}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-3">
             Permisos

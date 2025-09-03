@@ -1,13 +1,11 @@
 import { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
-
 interface SkeletonProps extends HTMLAttributes<HTMLDivElement> {
   variant?: "default" | "text" | "circular" | "rectangular";
   width?: string | number;
   height?: string | number;
   lines?: number;
 }
-
 export function Skeleton({
   className,
   variant = "default",
@@ -17,19 +15,16 @@ export function Skeleton({
   ...props
 }: SkeletonProps) {
   const baseClasses = "animate-pulse bg-gray-200 dark:bg-gray-700";
-
   const variants = {
     default: "rounded-md",
     text: "rounded h-4",
     circular: "rounded-full",
     rectangular: "rounded-none",
   };
-
   const style = {
     width: typeof width === "number" ? `${width}px` : width,
     height: typeof height === "number" ? `${height}px` : height,
   };
-
   if (variant === "text" && lines > 1) {
     return (
       <div className="space-y-2">
@@ -49,7 +44,6 @@ export function Skeleton({
       </div>
     );
   }
-
   return (
     <div
       className={cn(baseClasses, variants[variant], className)}
@@ -58,7 +52,6 @@ export function Skeleton({
     />
   );
 }
-
 export function SkeletonCard() {
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
@@ -77,7 +70,6 @@ export function SkeletonCard() {
     </div>
   );
 }
-
 export function SkeletonTable({ rows = 5 }: { rows?: number }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -102,5 +94,4 @@ export function SkeletonTable({ rows = 5 }: { rows?: number }) {
     </div>
   );
 }
-
 export default Skeleton;

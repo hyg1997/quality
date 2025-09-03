@@ -469,7 +469,6 @@ export default function QualityControlPage() {
   return (
     <PageLayout title="Control de Calidad">
       <div className="max-w-6xl mx-auto">
-        {/* Header with date/time */}
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             Registro de Producto
@@ -479,7 +478,6 @@ export default function QualityControlPage() {
           </p>
         </div>
 
-        {/* Basic Information Form */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Información Básica
@@ -581,7 +579,6 @@ export default function QualityControlPage() {
           </div>
         </div>
 
-        {/* Parameters Control Table */}
         {parameters.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -681,7 +678,6 @@ export default function QualityControlPage() {
           </div>
         )}
 
-        {/* General Observations */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Observaciones Generales
@@ -697,7 +693,6 @@ export default function QualityControlPage() {
           />
         </div>
 
-        {/* Photo Upload */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Evidencia Fotográfica
@@ -742,7 +737,6 @@ export default function QualityControlPage() {
                     key={index}
                     className="relative border border-gray-300 rounded-lg overflow-hidden"
                   >
-                    {/* Image Preview */}
                     {photoUrls[index] && (
                       <div className="aspect-video bg-gray-100 relative">
                         <Image
@@ -755,7 +749,6 @@ export default function QualityControlPage() {
                       </div>
                     )}
 
-                    {/* Photo Info */}
                     <div className="p-3">
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
@@ -794,7 +787,6 @@ export default function QualityControlPage() {
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="text-center">
           <button
             onClick={handleSaveAndGeneratePDF}

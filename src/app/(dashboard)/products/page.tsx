@@ -1,5 +1,4 @@
 "use client";
-
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Edit, Trash2, Package, Eye } from "lucide-react";
@@ -23,14 +22,12 @@ import {
   masterParameterService,
   type MasterParameter,
 } from "@/services/api/masterParameters";
-
 interface ProductFormData extends Record<string, unknown> {
   name: string;
   description: string;
   code: string;
   active: boolean;
 }
-
 interface ParameterFormData {
   id?: string;
   masterParameterId?: string;
@@ -43,16 +40,13 @@ interface ParameterFormData {
   required: boolean;
   active: boolean;
 }
-
 export default function ProductsManagement() {
   const { data: session, status } = useSession();
   const { hasPermission } = usePermissions();
   const { success, error } = useNotifications();
-
   const createModal = useModal<Product>();
   const editModal = useModal<Product>();
   const confirmModal = useConfirmModal();
-
   const {
     data: products,
     loading,
@@ -64,16 +58,13 @@ export default function ProductsManagement() {
         limit: 100,
         search: searchTerm,
       });
-
       if (!response.success || !response.data) {
         throw new Error("Error fetching products");
       }
-
       return response.data.products;
     },
     placeholder: "Buscar productos por nombre, código o descripción...",
   });
-
   const handleCreateProduct = useCallback(
     async (data: ProductFormData) => {
       try {
@@ -83,7 +74,6 @@ export default function ProductsManagement() {
           code: data.code,
           active: data.active,
         });
-
         if (response.success && response.data) {
           createModal.close();
           await refetchProducts();
@@ -103,11 +93,9 @@ export default function ProductsManagement() {
     },
     [createModal, refetchProducts, success, error]
   );
-
   const handleEditProduct = useCallback(
     async (data: ProductFormData) => {
       if (!editModal.data) return;
-
       try {
         const response = await productService.updateProduct(editModal.data.id, {
           name: data.name,
@@ -115,7 +103,6 @@ export default function ProductsManagement() {
           code: data.code,
           active: data.active,
         });
-
         if (response.success && response.data) {
           editModal.close();
           await refetchProducts();
@@ -138,12 +125,10 @@ export default function ProductsManagement() {
     },
     [editModal, refetchProducts, success, error]
   );
-
   const handleDeleteProduct = useCallback(
     async (product: Product) => {
       try {
         const response = await productService.deleteProduct(product.id);
-
         if (response.success) {
           await refetchProducts();
           success(
@@ -162,7 +147,6 @@ export default function ProductsManagement() {
     },
     [refetchProducts, success, error]
   );
-
   const handleToggleStatus = useCallback(
     async (product: Product) => {
       try {
@@ -170,7 +154,6 @@ export default function ProductsManagement() {
           product.id,
           !product.active
         );
-
         if (response.success && response.data) {
           await refetchProducts();
           const statusText = !product.active ? "activado" : "desactivado";
@@ -190,7 +173,6 @@ export default function ProductsManagement() {
     },
     [refetchProducts, success, error]
   );
-
   const columns: ColumnDef<Product>[] = useMemo(
     () => [
       {
@@ -242,7 +224,6 @@ export default function ProductsManagement() {
     ],
     []
   );
-
   const actions = useMemo(
     () =>
       [
@@ -281,7 +262,6 @@ export default function ProductsManagement() {
       hasPermission,
     ]
   );
-
   if (status === "loading") {
     return (
       <PageLayout title="Administra el catálogo de productos del sistema">
@@ -292,7 +272,6 @@ export default function ProductsManagement() {
       </PageLayout>
     );
   }
-
   if (!session || !hasPermission("content:read")) {
     return (
       <PageLayout title="Acceso Denegado">
@@ -308,7 +287,6 @@ export default function ProductsManagement() {
       </PageLayout>
     );
   }
-
   return (
     <>
       <PageLayout
@@ -334,16 +312,14 @@ export default function ProductsManagement() {
           search={searchProps}
         />
       </PageLayout>
-
-      {/* Modal de Crear Producto */}
+      {}
       <ProductFormModal
         isOpen={createModal.isOpen}
         onClose={createModal.close}
         onSubmit={handleCreateProduct}
         title="Crear Producto"
       />
-
-      {/* Modal de Editar Producto */}
+      {}
       <ProductFormModal
         isOpen={editModal.isOpen}
         onClose={editModal.close}
@@ -351,8 +327,7 @@ export default function ProductsManagement() {
         product={editModal.data}
         title="Editar Producto"
       />
-
-      {/* Modal de Confirmación */}
+      {}
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
@@ -363,7 +338,6 @@ export default function ProductsManagement() {
     </>
   );
 }
-
 interface ProductFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -371,7 +345,6 @@ interface ProductFormModalProps {
   product?: Product;
   title: string;
 }
-
 function ProductFormModal({
   isOpen,
   onClose,
@@ -386,7 +359,6 @@ function ProductFormModal({
   const [activeTab, setActiveTab] = useState<"product" | "parameters">(
     "product"
   );
-
   const form = useForm<ProductFormData>({
     initialValues: {
       name: product?.name || "",
@@ -402,7 +374,6 @@ function ProductFormModal({
       await handleSubmit(data);
     },
   });
-
   const loadAvailableParameters = useCallback(async () => {
     try {
       const response = await masterParameterService.getMasterParameters({
@@ -413,11 +384,9 @@ function ProductFormModal({
         const usedMasterParameterIds = parameters
           .map((p) => p.masterParameterId)
           .filter(Boolean);
-
         const availableMasterParameters = response.data.masterParameters.filter(
           (masterParam) => !usedMasterParameterIds.includes(masterParam.id)
         );
-
         const uniqueParameters = availableMasterParameters.reduce(
           (acc: MasterParameter[], param) => {
             if (!acc.find((p) => p.id === param.id)) {
@@ -427,14 +396,12 @@ function ProductFormModal({
           },
           []
         );
-
         setAvailableParameters(uniqueParameters);
       }
     } catch (error) {
       console.error("Error loading master parameters:", error);
     }
   }, [parameters]);
-
   useEffect(() => {
     if (product?.parameters && Array.isArray(product.parameters) && isOpen) {
       const parameterData = product.parameters.map((param: Parameter) => ({
@@ -453,13 +420,11 @@ function ProductFormModal({
       setParameters([]);
     }
   }, [product?.parameters, isOpen, product?.id]);
-
   useEffect(() => {
     if (isOpen && product?.id) {
       loadAvailableParameters();
     }
   }, [isOpen, product?.id, parameters, loadAvailableParameters]);
-
   const addParameter = () => {
     const newParameter: ParameterFormData = {
       name: "",
@@ -473,11 +438,9 @@ function ProductFormModal({
     };
     setParameters([...parameters, newParameter]);
   };
-
   const removeParameter = (index: number) => {
     setParameters(parameters.filter((_, i) => i !== index));
   };
-
   const updateParameter = (
     index: number,
     field: keyof ParameterFormData,
@@ -487,7 +450,6 @@ function ProductFormModal({
     updatedParameters[index] = { ...updatedParameters[index], [field]: value };
     setParameters(updatedParameters);
   };
-
   const selectExistingParameter = (index: number, parameterId: string) => {
     const selectedParam = availableParameters.find((p) => p.id === parameterId);
     if (selectedParam) {
@@ -500,14 +462,11 @@ function ProductFormModal({
         active: selectedParam.active,
       };
       setParameters(updatedParameters);
-
       loadAvailableParameters();
     }
   };
-
   const saveParameters = async () => {
     if (!product?.id) return;
-
     try {
       for (const param of parameters) {
         if (param.id) {
@@ -536,16 +495,13 @@ function ProductFormModal({
           });
         }
       }
-
       await reloadProductData();
     } catch (error) {
       console.error("Error saving parameters:", error);
     }
   };
-
   const reloadProductData = async () => {
     if (!product?.id) return;
-
     try {
       const response = await productService.getProduct(product.id);
       if (response.success && response.data) {
@@ -563,21 +519,18 @@ function ProductFormModal({
                 active: param.active,
               }))
             : [];
-
         setParameters(updatedParameters);
       }
     } catch (error) {
       console.error("Error reloading product data:", error);
     }
   };
-
   const handleSubmit = async (data: ProductFormData) => {
     await onSubmit(data);
     if (product?.id) {
       await saveParameters();
     }
   };
-
   return (
     <FormModal
       isOpen={isOpen}
@@ -589,7 +542,7 @@ function ProductFormModal({
       size="xl"
     >
       <div className="space-y-6">
-        {/* Tabs */}
+        {}
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
             <button
@@ -618,8 +571,7 @@ function ProductFormModal({
             )}
           </nav>
         </div>
-
-        {/* Product Tab */}
+        {}
         {activeTab === "product" && (
           <div className="space-y-4">
             <div>
@@ -638,7 +590,6 @@ function ProductFormModal({
                 <p className="text-red-500 text-sm mt-1">{form.errors.name}</p>
               )}
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Código
@@ -655,7 +606,6 @@ function ProductFormModal({
                 <p className="text-red-500 text-sm mt-1">{form.errors.code}</p>
               )}
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Descripción
@@ -668,7 +618,6 @@ function ProductFormModal({
                 placeholder="Descripción del producto"
               />
             </div>
-
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -686,8 +635,7 @@ function ProductFormModal({
             </div>
           </div>
         )}
-
-        {/* Parameters Tab */}
+        {}
         {activeTab === "parameters" && product?.id && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -703,7 +651,6 @@ function ProductFormModal({
                 Agregar Parámetro
               </button>
             </div>
-
             <div className="space-y-4 max-h-96 overflow-y-auto">
               {parameters.map((param, index) => (
                 <div
@@ -767,7 +714,6 @@ function ProductFormModal({
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
-
                   {param.type === "range" && (
                     <div className="grid grid-cols-3 gap-4">
                       <div>
@@ -820,7 +766,6 @@ function ProductFormModal({
                       </div>
                     </div>
                   )}
-
                   {(param.type === "text" || param.type === "numeric") && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -841,7 +786,6 @@ function ProductFormModal({
                       />
                     </div>
                   )}
-
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center">
                       <input
@@ -880,7 +824,6 @@ function ProductFormModal({
                   </div>
                 </div>
               ))}
-
               {parameters.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />

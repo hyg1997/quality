@@ -1,9 +1,7 @@
 "use client";
-
 import { ReactNode } from "react";
 import Button from "../Button";
 import { Modal } from "./Modal";
-
 interface FormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -17,7 +15,6 @@ interface FormModalProps {
   size?: "sm" | "md" | "lg" | "xl" | "full";
   showCancelButton?: boolean;
 }
-
 export function FormModal({
   isOpen,
   onClose,
@@ -35,7 +32,6 @@ export function FormModal({
     e.preventDefault();
     onSubmit(e);
   };
-
   return (
     <Modal
       isOpen={isOpen}
@@ -47,7 +43,6 @@ export function FormModal({
     >
       <form onSubmit={handleSubmit}>
         <div className="p-6">{children}</div>
-
         <div className="flex justify-end space-x-3 px-6 py-4 bg-gray-50 border-t border-gray-200">
           {showCancelButton && (
             <Button
@@ -67,5 +62,4 @@ export function FormModal({
     </Modal>
   );
 }
-
 export default FormModal;

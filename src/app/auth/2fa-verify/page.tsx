@@ -1,44 +1,35 @@
 "use client";
-
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Lock, Check } from "lucide-react";
-
 function TwoFactorVerifyContent() {
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const username = searchParams.get("username");
   const password = searchParams.get("password");
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
-
   useEffect(() => {
     if (!username || !password) {
       router.push("/auth/signin");
     }
   }, [username, password, router]);
-
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!token) {
       setError("Ingresa el código de verificación");
       return;
     }
-
     if (!username || !password) {
       setError("Sesión expirada, inicia sesión nuevamente");
       router.push("/auth/signin");
       return;
     }
-
     setLoading(true);
     setError("");
-
     try {
       const response = await fetch("/api/auth/2fa/login-verify", {
         method: "POST",
@@ -47,16 +38,13 @@ function TwoFactorVerifyContent() {
         },
         body: JSON.stringify({ username, password, token }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
         const result = await signIn("credentials", {
           username,
           password,
           redirect: false,
         });
-
         if (result?.ok) {
           router.push(callbackUrl);
         } else {
@@ -71,11 +59,9 @@ function TwoFactorVerifyContent() {
       setLoading(false);
     }
   };
-
   const handleBackToLogin = () => {
     router.push("/auth/signin");
   };
-
   if (!username || !password) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -83,7 +69,6 @@ function TwoFactorVerifyContent() {
       </div>
     );
   }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -98,7 +83,6 @@ function TwoFactorVerifyContent() {
             Ingresa el código de 6 dígitos de tu aplicación de autenticación
           </p>
         </div>
-
         <form
           className="mt-8 space-y-6 bg-white p-8 rounded-xl shadow-lg"
           onSubmit={handleVerify}
@@ -127,7 +111,6 @@ function TwoFactorVerifyContent() {
               </div>
             </div>
           )}
-
           <div>
             <label
               htmlFor="token"
@@ -153,7 +136,6 @@ function TwoFactorVerifyContent() {
               Ingresa el código de 6 dígitos de tu aplicación de autenticación
             </p>
           </div>
-
           <div className="space-y-4">
             <button
               type="submit"
@@ -172,7 +154,6 @@ function TwoFactorVerifyContent() {
                 </span>
               )}
             </button>
-
             <button
               type="button"
               onClick={handleBackToLogin}
@@ -182,7 +163,6 @@ function TwoFactorVerifyContent() {
             </button>
           </div>
         </form>
-
         <div className="text-center">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center justify-center">
@@ -217,7 +197,6 @@ function TwoFactorVerifyContent() {
     </div>
   );
 }
-
 export default function TwoFactorVerifyPage() {
   return (
     <Suspense

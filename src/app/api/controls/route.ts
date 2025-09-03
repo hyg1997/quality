@@ -3,16 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-
-// POST /api/controls - Create quality control record
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session || !hasPermission(session, PERMISSIONS.CONTENT?.CREATE)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const {
       productId,
       internalLot,
@@ -23,8 +19,6 @@ export async function POST(request: NextRequest) {
       controls,
       photos
     } = await request.json();
-
-    // Debug logs
     console.log('Received photos:', photos ? photos.length : 0);
     if (photos && photos.length > 0) {
       console.log('First photo:', {
@@ -33,49 +27,37 @@ export async function POST(request: NextRequest) {
         base64Length: photos[0].base64Data ? photos[0].base64Data.length : 0
       });
     }
-
-    // Validations
     if (!productId || !internalLot || !quantity || !verifiedBy) {
       return NextResponse.json(
         { error: "Producto, lote interno, cantidad y verificador son requeridos" },
         { status: 400 }
       );
     }
-
     if (quantity <= 0) {
       return NextResponse.json(
         { error: "La cantidad debe ser mayor a 0" },
         { status: 400 }
       );
     }
-
-    // Verify product exists
     const product = await prisma.product.findUnique({
       where: { id: productId },
     });
-
     if (!product) {
       return NextResponse.json(
         { error: "Producto no encontrado" },
         { status: 404 }
       );
     }
-
-    // Check if internal lot already exists
     const existingRecord = await prisma.record.findFirst({
       where: { internalLot },
     });
-
     if (existingRecord) {
       return NextResponse.json(
         { error: "El lote interno ya existe" },
         { status: 400 }
       );
     }
-
-    // Create record with controls and photos in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create the main record
       const record = await tx.record.create({
         data: {
           productId,
@@ -88,8 +70,6 @@ export async function POST(request: NextRequest) {
           userId: session.user.id,
         },
       });
-
-      // Create controls
       if (controls && Array.isArray(controls)) {
         for (const control of controls) {
           await tx.control.create({
@@ -108,8 +88,6 @@ export async function POST(request: NextRequest) {
           });
         }
       }
-
-      // Create photos
       if (photos && Array.isArray(photos)) {
         console.log('Creating photos in database:', photos.length);
         for (const photo of photos) {
@@ -119,7 +97,6 @@ export async function POST(request: NextRequest) {
             hasBase64Data: !!photo.base64Data,
             base64Length: photo.base64Data ? photo.base64Data.length : 0
           });
-          
           const createdPhoto = await tx.photo.create({
             data: {
               recordId: record.id,
@@ -127,17 +104,13 @@ export async function POST(request: NextRequest) {
               base64Data: photo.base64Data,
             },
           });
-          
           console.log('Photo created with ID:', createdPhoto.id);
         }
       } else {
         console.log('No photos to create or photos is not an array:', photos);
       }
-
       return record;
     });
-
-    // Create audit log
     await prisma.auditLog.create({
       data: {
         userId: session.user.id,
@@ -157,7 +130,6 @@ export async function POST(request: NextRequest) {
         }),
       },
     });
-
     return NextResponse.json({
       recordId: result.id,
       message: "Control de calidad creado exitosamente"

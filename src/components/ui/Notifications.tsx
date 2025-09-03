@@ -1,10 +1,8 @@
 "use client";
-
 import { useEffect } from "react";
 import { Plus, Check, AlertTriangle, Info } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { cn } from "@/lib/utils";
-
 interface NotificationProps {
   id: string;
   type: "success" | "error" | "warning" | "info";
@@ -12,7 +10,6 @@ interface NotificationProps {
   message?: string;
   onClose: (id: string) => void;
 }
-
 function NotificationItem({
   id,
   type,
@@ -26,31 +23,25 @@ function NotificationItem({
     warning: AlertTriangle,
     info: Info,
   };
-
   const colors = {
     success: "bg-green-50 border-green-200 text-green-800",
     error: "bg-red-50 border-red-200 text-red-800",
     warning: "bg-yellow-50 border-yellow-200 text-yellow-800",
     info: "bg-blue-50 border-blue-200 text-blue-800",
   };
-
   const iconColors = {
     success: "text-green-400",
     error: "text-red-400",
     warning: "text-yellow-400",
     info: "text-blue-400",
   };
-
   const Icon = icons[type];
-
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose(id);
     }, 5000);
-
     return () => clearTimeout(timer);
   }, [id, onClose]);
-
   return (
     <div
       className={cn(
@@ -81,14 +72,11 @@ function NotificationItem({
     </div>
   );
 }
-
 export function NotificationContainer() {
   const { state, removeNotification } = useApp();
-
   if (state.notifications.length === 0) {
     return null;
   }
-
   return (
     <div className="fixed inset-0 flex items-end justify-center px-4 py-6 pointer-events-none sm:p-6 sm:items-start sm:justify-end z-50">
       <div className="w-full flex flex-col items-center space-y-4 sm:items-end">
@@ -103,5 +91,4 @@ export function NotificationContainer() {
     </div>
   );
 }
-
 export default NotificationContainer;

@@ -5,17 +5,14 @@ import AuthSessionProvider from "@/components/providers/session-provider";
 import { AppProvider } from "@/contexts/AppContext";
 import { NotificationContainer } from "@/components/ui/Notifications";
 import ErrorBoundary from "@/components/ErrorBoundary";
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
-
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
 export const metadata: Metadata = {
   title: "Sistema de Control de Calidad",
   description: "Sistema de gestión y control de calidad empresarial",
@@ -40,7 +37,6 @@ export const metadata: Metadata = {
     description: "Sistema de gestión y control de calidad empresarial"
   }
 };
-
 export const viewport: Viewport = {
   themeColor: "#2563eb",
   width: "device-width",
@@ -48,7 +44,6 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false
 };
-
 export default function RootLayout({
   children,
 }: {

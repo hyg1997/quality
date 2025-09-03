@@ -2,10 +2,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import DashboardStats from "@/components/server/DashboardStats";
 import UserInfo from "@/components/server/UserInfo";
-
 export default async function Dashboard() {
   const session = await getServerSession(authOptions);
-
   if (!session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -20,10 +18,9 @@ export default async function Dashboard() {
       </div>
     );
   }
-
   return (
     <div className="space-y-8 px-4 sm:px-6 lg:px-8">
-      {/* Header */}
+      {}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Dashboard Principal
@@ -32,12 +29,9 @@ export default async function Dashboard() {
           Bienvenido al sistema de control de calidad
         </p>
       </div>
-
       <DashboardStats />
-
       <UserInfo />
-
-      {/* Mensaje si no tiene permisos */}
+      {}
       {!session.user.permissions?.length && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
           <div className="flex">

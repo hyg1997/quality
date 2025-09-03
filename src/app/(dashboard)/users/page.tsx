@@ -1,5 +1,4 @@
 "use client";
-
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Edit, Trash2, Shield, ShieldOff } from "lucide-react";
@@ -23,7 +22,6 @@ import {
   type User,
   type UserRole,
 } from "@/services/api";
-
 interface UserFormData extends Record<string, unknown> {
   email: string;
   username: string;
@@ -31,18 +29,14 @@ interface UserFormData extends Record<string, unknown> {
   password: string;
   roleIds: string[];
 }
-
 export default function UsersManagement() {
   const { data: session, status } = useSession();
   const { hasPermission, isAdmin } = usePermissions();
   const { success, error } = useNotifications();
-
   const [roles, setRoles] = useState<UserRole[]>([]);
-
   const createModal = useModal<User>();
   const editModal = useModal<User>();
   const confirmModal = useConfirmModal();
-
   const {
     data: users,
     loading,
@@ -54,17 +48,14 @@ export default function UsersManagement() {
       if (searchTerm) {
         url.searchParams.set("search", searchTerm);
       }
-
       const response = await fetch(url.toString());
       if (!response.ok) {
         throw new Error("Error fetching users");
       }
-
       return response.json();
     },
     placeholder: "Buscar usuarios por nombre, email o username...",
   });
-
   const fetchRoles = useCallback(async () => {
     const response = await roleService.getRoles();
     if (response.success && response.data) {
@@ -77,7 +68,6 @@ export default function UsersManagement() {
       setRoles(userRoles);
     }
   }, []);
-
   const columns: ColumnDef<User>[] = useMemo(
     () => [
       {
@@ -151,13 +141,11 @@ export default function UsersManagement() {
     ],
     []
   );
-
   useEffect(() => {
     if (session && hasPermission("users:read")) {
       fetchRoles();
     }
   }, [session, hasPermission, fetchRoles]);
-
   const handleDeleteUser = useCallback(
     async (user: User) => {
       if (!userService.canDeleteUser(user)) {
@@ -170,7 +158,6 @@ export default function UsersManagement() {
         });
         return;
       }
-
       confirmModal.confirm({
         title: "Eliminar Usuario",
         message: `¿Estás seguro de que quieres eliminar a "${userService.formatUserDisplayName(
@@ -206,7 +193,6 @@ export default function UsersManagement() {
     },
     [confirmModal, refetchUsers, success, error]
   );
-
   const handleDisable2FA = useCallback(
     async (user: User) => {
       confirmModal.confirm({
@@ -245,7 +231,6 @@ export default function UsersManagement() {
     },
     [confirmModal, refetchUsers, success, error]
   );
-
   const handleCreateUser = async (formData: UserFormData) => {
     try {
       const response = await userService.createUser({
@@ -255,7 +240,6 @@ export default function UsersManagement() {
         password: formData.password,
         roleIds: formData.roleIds,
       });
-
       if (response.success) {
         createModal.close();
         await refetchUsers();
@@ -273,7 +257,6 @@ export default function UsersManagement() {
       error("Error al crear usuario", "Ha ocurrido un error inesperado");
     }
   };
-
   const handleUpdateUser = async (userId: string, formData: UserFormData) => {
     try {
       const response = await userService.updateUser(userId, {
@@ -283,7 +266,6 @@ export default function UsersManagement() {
         password: formData.password || undefined,
         roleIds: formData.roleIds,
       });
-
       if (response.success) {
         editModal.close();
         await refetchUsers();
@@ -301,7 +283,6 @@ export default function UsersManagement() {
       error("Error al actualizar usuario", "Ha ocurrido un error inesperado");
     }
   };
-
   const actions: ActionDef<User>[] = useMemo(
     () => [
       {
@@ -333,7 +314,6 @@ export default function UsersManagement() {
     ],
     [editModal, handleDisable2FA, handleDeleteUser, hasPermission, isAdmin]
   );
-
   if (status === "loading") {
     return (
       <PageLayout title="Administra usuarios del sistema">
@@ -344,7 +324,6 @@ export default function UsersManagement() {
       </PageLayout>
     );
   }
-
   if (!session || !hasPermission("users:read")) {
     return (
       <PageLayout title="Acceso Denegado">
@@ -360,7 +339,6 @@ export default function UsersManagement() {
       </PageLayout>
     );
   }
-
   return (
     <>
       <PageLayout
@@ -386,8 +364,7 @@ export default function UsersManagement() {
           search={searchProps}
         />
       </PageLayout>
-
-      {/* Modal de Crear Usuario */}
+      {}
       <UserFormModal
         isOpen={createModal.isOpen}
         onClose={createModal.close}
@@ -395,8 +372,7 @@ export default function UsersManagement() {
         roles={roles}
         title="Crear Nuevo Usuario"
       />
-
-      {/* Modal de Editar Usuario */}
+      {}
       <UserFormModal
         isOpen={editModal.isOpen}
         onClose={editModal.close}
@@ -407,8 +383,7 @@ export default function UsersManagement() {
         user={editModal.data}
         title="Editar Usuario"
       />
-
-      {/* Modal de Confirmación */}
+      {}
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         onClose={confirmModal.close}
@@ -422,7 +397,6 @@ export default function UsersManagement() {
     </>
   );
 }
-
 interface UserFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -431,7 +405,6 @@ interface UserFormModalProps {
   user?: User;
   title: string;
 }
-
 function UserFormModal({
   isOpen,
   onClose,
@@ -460,16 +433,13 @@ function UserFormModal({
       await onSubmit(data);
     },
   });
-
   const toggleRole = (roleId: string) => {
     const currentRoles = form.values.roleIds;
     const newRoles = currentRoles.includes(roleId)
       ? currentRoles.filter((id) => id !== roleId)
       : [...currentRoles, roleId];
-
     form.setValue("roleIds", newRoles);
   };
-
   return (
     <FormModal
       isOpen={isOpen}
@@ -498,7 +468,6 @@ function UserFormModal({
               <p className="text-red-500 text-sm mt-1">{form.errors.email}</p>
             )}
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Usuario (opcional)
@@ -513,7 +482,6 @@ function UserFormModal({
             />
           </div>
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Nombre Completo *
@@ -530,7 +498,6 @@ function UserFormModal({
             <p className="text-red-500 text-sm mt-1">{form.errors.fullName}</p>
           )}
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Contraseña {!user && "*"}
@@ -548,7 +515,6 @@ function UserFormModal({
             <p className="text-red-500 text-sm mt-1">{form.errors.password}</p>
           )}
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Roles

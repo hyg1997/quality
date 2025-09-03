@@ -1,10 +1,8 @@
 "use client"
-
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { hasPermission, isAdmin, PERMISSIONS } from "@/lib/permissions"
 import { Lock, Users, Settings, ClipboardList, HardDrive } from "lucide-react"
-
 interface SettingCard {
   title: string
   description: string
@@ -14,10 +12,8 @@ interface SettingCard {
   adminOnly?: boolean
   color: string
 }
-
 export default function SettingsPage() {
   const { data: session, status } = useSession()
-
   if (status === "loading" || !session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -25,7 +21,6 @@ export default function SettingsPage() {
       </div>
     )
   }
-
   const settingsCards: SettingCard[] = [
     {
       title: "Autenticación de Dos Factores",
@@ -75,24 +70,21 @@ export default function SettingsPage() {
       color: "bg-orange-500"
     }
   ]
-
   const filteredSettings = settingsCards.filter(setting => {
     if (setting.adminOnly && !isAdmin(session)) return false
     if (setting.permission && !hasPermission(session, setting.permission)) return false
     return true
   })
-
   return (
     <div className="space-y-6 px-4 sm:px-6 lg:px-8">
-      {/* Header */}
+      {}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
         <p className="mt-1 text-sm text-gray-600">
           Administra la configuración de tu cuenta y del sistema
         </p>
       </div>
-
-      {/* Settings Grid */}
+      {}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredSettings.map((setting) => (
           <Link
@@ -133,8 +125,7 @@ export default function SettingsPage() {
           </Link>
         ))}
       </div>
-
-      {/* User Info Card */}
+      {}
       <div className="bg-white shadow-sm rounded-xl border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Información de la Cuenta</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -167,8 +158,7 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-
-      {/* Security Notice */}
+      {}
       {!isAdmin(session) && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex">

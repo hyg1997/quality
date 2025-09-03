@@ -3,21 +3,16 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
-
-// GET /api/parameters/[id] - Get parameter by ID
 export async function GET(
   _: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session || !hasPermission(session, PERMISSIONS.CONTENT?.READ)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const { id } = await params;
-
     const parameter = await prisma.parameter.findUnique({
       where: { id },
       include: {
@@ -30,14 +25,12 @@ export async function GET(
         },
       },
     });
-
     if (!parameter) {
       return NextResponse.json(
         { error: "Parameter not found" },
         { status: 404 }
       );
     }
-
     return NextResponse.json(parameter);
   } catch (error) {
     console.error("Error fetching parameter:", error);
@@ -47,19 +40,15 @@ export async function GET(
     );
   }
 }
-
-// PUT /api/parameters/[id] - Update parameter
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session || !hasPermission(session, PERMISSIONS.CONTENT?.UPDATE)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const { id } = await params;
     const {
       productId,
@@ -72,27 +61,21 @@ export async function PUT(
       required,
       active,
     } = await request.json();
-
-    // Verify parameter exists
     const existingParameter = await prisma.parameter.findUnique({
       where: { id },
       include: {
         product: true,
       },
     });
-
     if (!existingParameter) {
       return NextResponse.json(
         { error: "Parameter not found" },
         { status: 404 }
       );
     }
-
-    // Validations
     if (name !== undefined && (!name || name.trim() === "")) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
-
     if (type !== undefined && !["range", "text", "numeric"].includes(type)) {
       return NextResponse.json(
         {
@@ -101,13 +84,10 @@ export async function PUT(
         { status: 400 }
       );
     }
-
-    // Verify product exists if changing productId
     if (productId && productId !== existingParameter.productId) {
       const product = await prisma.product.findUnique({
         where: { id: productId },
       });
-
       if (!product) {
         return NextResponse.json(
           { error: "Product not found" },
@@ -115,15 +95,12 @@ export async function PUT(
         );
       }
     }
-
-    // Validate range values for range type
     const finalType = type || existingParameter.type;
     if (finalType === "range") {
       const finalMinRange =
         minRange !== undefined ? minRange : existingParameter.minRange;
       const finalMaxRange =
         maxRange !== undefined ? maxRange : existingParameter.maxRange;
-
       if (finalMinRange === null || finalMaxRange === null) {
         return NextResponse.json(
           {
@@ -132,7 +109,6 @@ export async function PUT(
           { status: 400 }
         );
       }
-
       if (finalMinRange >= finalMaxRange) {
         return NextResponse.json(
           {
@@ -142,7 +118,6 @@ export async function PUT(
         );
       }
     }
-
     const updateData: Record<string, unknown> = {};
     if (productId !== undefined) updateData.productId = productId;
     if (name !== undefined) updateData.name = name.trim();
@@ -156,7 +131,6 @@ export async function PUT(
     if (unit !== undefined) updateData.unit = unit?.trim();
     if (required !== undefined) updateData.required = required;
     if (active !== undefined) updateData.active = active;
-
     const parameter = await prisma.parameter.update({
       where: { id },
       data: updateData,
@@ -170,8 +144,6 @@ export async function PUT(
         },
       },
     });
-
-    // Create audit log
     await prisma.auditLog.create({
       data: {
         userId: session.user.id,
@@ -186,7 +158,6 @@ export async function PUT(
         }),
       },
     });
-
     return NextResponse.json(parameter);
   } catch (error) {
     console.error("Error updating parameter:", error);
@@ -196,22 +167,16 @@ export async function PUT(
     );
   }
 }
-
-// DELETE /api/parameters/[id] - Delete parameter
 export async function DELETE(
   _: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session || !hasPermission(session, PERMISSIONS.CONTENT?.DELETE)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const { id } = await params;
-
-    // Verify parameter exists
     const existingParameter = await prisma.parameter.findUnique({
       where: { id },
       include: {
@@ -222,15 +187,12 @@ export async function DELETE(
         },
       },
     });
-
     if (!existingParameter) {
       return NextResponse.json(
         { error: "Parameter not found" },
         { status: 404 }
       );
     }
-
-    // Check if it has associated controls
     if (existingParameter._count.controls > 0) {
       return NextResponse.json(
         {
@@ -239,12 +201,9 @@ export async function DELETE(
         { status: 400 }
       );
     }
-
     await prisma.parameter.delete({
       where: { id },
     });
-
-    // Create audit log
     await prisma.auditLog.create({
       data: {
         userId: session.user.id,
@@ -258,7 +217,6 @@ export async function DELETE(
         }),
       },
     });
-
     return NextResponse.json({ message: "Parameter deleted successfully" });
   } catch (error) {
     console.error("Error deleting parameter:", error);

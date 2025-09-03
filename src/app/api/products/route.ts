@@ -3,25 +3,18 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
-
-// GET /api/products - Obtener productos con paginación y filtros
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session || !hasPermission(session, PERMISSIONS.CONTENT?.READ)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
-
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
     const active = searchParams.get("active");
-
     const skip = (page - 1) * limit;
-
-    // Construir filtros
     const where: {
       OR?: Array<{
         name?: { contains: string };
@@ -30,7 +23,6 @@ export async function GET(request: NextRequest) {
       }>;
       active?: boolean;
     } = {};
-
     if (search) {
       where.OR = [
         { name: { contains: search } },
@@ -38,12 +30,9 @@ export async function GET(request: NextRequest) {
         { code: { contains: search } },
       ];
     }
-
     if (active !== null) {
       where.active = active === "true";
     }
-
-    // Obtener productos con conteos
     const [products, total] = await Promise.all([
       prisma.product.findMany({
         where,
@@ -64,7 +53,6 @@ export async function GET(request: NextRequest) {
       }),
       prisma.product.count({ where }),
     ]);
-
     return NextResponse.json({
       products,
       total,
@@ -79,32 +67,23 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-// POST /api/products - Crear nuevo producto
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session || !hasPermission(session, PERMISSIONS.CONTENT?.CREATE)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const { name, description, code, active = true } = await request.json();
-
-    // Validaciones
     if (!name || name.trim() === "") {
       return NextResponse.json(
         { error: "El nombre es requerido" },
         { status: 400 }
       );
     }
-
-    // Verificar código único si se proporciona
     if (code) {
       const existingProduct = await prisma.product.findUnique({
         where: { code },
       });
-
       if (existingProduct) {
         return NextResponse.json(
           { error: "El código ya existe" },
@@ -112,7 +91,6 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-
     const product = await prisma.product.create({
       data: {
         name: name.trim(),
@@ -129,8 +107,6 @@ export async function POST(request: NextRequest) {
         },
       },
     });
-
-    // Crear log de auditoría
     await prisma.auditLog.create({
       data: {
         userId: session.user.id,
@@ -143,7 +119,6 @@ export async function POST(request: NextRequest) {
         }),
       },
     });
-
     return NextResponse.json(product);
   } catch (error) {
     console.error("Error creating product:", error);

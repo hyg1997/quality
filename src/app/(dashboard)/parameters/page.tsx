@@ -1,5 +1,4 @@
 "use client";
-
 import { useSession } from "next-auth/react";
 import { useMemo, useCallback } from "react";
 import { Plus, Edit, Trash2, Package, Eye } from "lucide-react";
@@ -20,7 +19,6 @@ import {
   masterParameterService,
   type MasterParameter,
 } from "@/services/api/masterParameters";
-
 interface MasterParameterFormData extends Record<string, unknown> {
   name: string;
   description?: string;
@@ -31,16 +29,13 @@ interface MasterParameterFormData extends Record<string, unknown> {
   unit?: string;
   active: boolean;
 }
-
 export default function MasterParametersManagement() {
   const { data: session, status } = useSession();
   const { hasPermission } = usePermissions();
   const { success, error } = useNotifications();
-
   const createModal = useModal<MasterParameter>();
   const editModal = useModal<MasterParameter>();
   const confirmModal = useConfirmModal();
-
   const {
     data: masterParameters,
     loading,
@@ -52,16 +47,13 @@ export default function MasterParametersManagement() {
         limit: 100,
         search: searchTerm,
       });
-
       if (!response.success || !response.data) {
         throw new Error("Error fetching master parameters");
       }
-
       return response.data.masterParameters;
     },
     placeholder: "Buscar parámetros por nombre, descripción o tipo...",
   });
-
   const handleCreateMasterParameter = useCallback(
     async (data: MasterParameterFormData) => {
       try {
@@ -71,7 +63,6 @@ export default function MasterParametersManagement() {
           type: data.type,
           active: data.active,
         });
-
         if (response.success && response.data) {
           createModal.close();
           await refetchMasterParameters();
@@ -94,11 +85,9 @@ export default function MasterParametersManagement() {
     },
     [createModal, refetchMasterParameters, success, error]
   );
-
   const handleEditMasterParameter = useCallback(
     async (data: MasterParameterFormData) => {
       if (!editModal.data) return;
-
       try {
         const response = await masterParameterService.updateMasterParameter(
           editModal.data.id,
@@ -109,7 +98,6 @@ export default function MasterParametersManagement() {
             active: data.active,
           }
         );
-
         if (response.success && response.data) {
           editModal.close();
           await refetchMasterParameters();
@@ -132,7 +120,6 @@ export default function MasterParametersManagement() {
     },
     [editModal, refetchMasterParameters, success, error]
   );
-
   const handleDeleteMasterParameter = useCallback(
     async (masterParameter: MasterParameter) => {
       confirmModal.confirm({
@@ -145,7 +132,6 @@ export default function MasterParametersManagement() {
             const response = await masterParameterService.deleteMasterParameter(
               masterParameter.id
             );
-
             if (response.success) {
               await refetchMasterParameters();
               success(
@@ -169,7 +155,6 @@ export default function MasterParametersManagement() {
     },
     [confirmModal, refetchMasterParameters, success, error]
   );
-
   const handleToggleStatus = useCallback(
     async (masterParameter: MasterParameter) => {
       try {
@@ -178,7 +163,6 @@ export default function MasterParametersManagement() {
             masterParameter.id,
             !masterParameter.active
           );
-
         if (response.success && response.data) {
           await refetchMasterParameters();
           const statusText = !masterParameter.active
@@ -201,7 +185,6 @@ export default function MasterParametersManagement() {
     },
     [refetchMasterParameters, success, error]
   );
-
   const columns: ColumnDef<MasterParameter>[] = useMemo(
     () => [
       {
@@ -257,7 +240,6 @@ export default function MasterParametersManagement() {
     ],
     []
   );
-
   const actions: ActionDef<MasterParameter>[] = useMemo(
     () => [
       {
@@ -284,7 +266,6 @@ export default function MasterParametersManagement() {
     ],
     [editModal, handleToggleStatus, handleDeleteMasterParameter, hasPermission]
   );
-
   if (status === "loading") {
     return (
       <PageLayout title="Cargando...">
@@ -295,7 +276,6 @@ export default function MasterParametersManagement() {
       </PageLayout>
     );
   }
-
   if (!session || !hasPermission("content:read")) {
     return (
       <PageLayout title="Acceso Denegado">
@@ -311,7 +291,6 @@ export default function MasterParametersManagement() {
       </PageLayout>
     );
   }
-
   return (
     <>
       <PageLayout
@@ -337,16 +316,14 @@ export default function MasterParametersManagement() {
           search={searchProps}
         />
       </PageLayout>
-
-      {/* Modal de Crear Parámetro Maestro */}
+      {}
       <MasterParameterFormModal
         isOpen={createModal.isOpen}
         onClose={createModal.close}
         onSubmit={handleCreateMasterParameter}
         title="Crear Parámetro Maestro"
       />
-
-      {/* Modal de Editar Parámetro Maestro */}
+      {}
       <MasterParameterFormModal
         isOpen={editModal.isOpen}
         onClose={editModal.close}
@@ -357,7 +334,6 @@ export default function MasterParametersManagement() {
     </>
   );
 }
-
 interface MasterParameterFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -365,7 +341,6 @@ interface MasterParameterFormModalProps {
   masterParameter?: MasterParameter;
   title: string;
 }
-
 function MasterParameterFormModal({
   isOpen,
   onClose,
@@ -388,7 +363,6 @@ function MasterParameterFormModal({
       await onSubmit(data);
     },
   });
-
   return (
     <FormModal
       isOpen={isOpen}
@@ -418,7 +392,6 @@ function MasterParameterFormModal({
               <p className="text-red-500 text-sm mt-1">{form.errors.name}</p>
             )}
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Tipo *
@@ -439,7 +412,6 @@ function MasterParameterFormModal({
             )}
           </div>
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Descripción

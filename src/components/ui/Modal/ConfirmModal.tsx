@@ -1,9 +1,7 @@
 "use client";
-
 import { AlertTriangle, Info, Check, Plus } from "lucide-react";
 import Button from "../Button";
 import { Modal } from "./Modal";
-
 interface ConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -15,7 +13,6 @@ interface ConfirmModalProps {
   cancelText?: string;
   loading?: boolean;
 }
-
 const typeConfig = {
   danger: {
     icon: Plus,
@@ -38,7 +35,6 @@ const typeConfig = {
     confirmVariant: "primary" as const,
   },
 };
-
 export function ConfirmModal({
   isOpen,
   onClose,
@@ -52,11 +48,9 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   const config = typeConfig[type];
   const Icon = config.icon;
-
   const handleConfirm = () => {
     onConfirm();
   };
-
   return (
     <Modal
       isOpen={isOpen}
@@ -92,5 +86,4 @@ export function ConfirmModal({
     </Modal>
   );
 }
-
 export default ConfirmModal;

@@ -1,5 +1,4 @@
 "use client";
-
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Trash2, ClipboardList, FileText, Eye } from "lucide-react";
@@ -19,7 +18,6 @@ import { useDataTableSearch } from "@/hooks/useDataTableSearch";
 import { recordService, type ProductRecord } from "@/services/api/records";
 import { productService, type Product } from "@/services/api/products";
 import { controlService } from "@/services/api/controls";
-
 interface RecordFormData extends Record<string, unknown> {
   productId: string;
   internalLot: string;
@@ -30,18 +28,15 @@ interface RecordFormData extends Record<string, unknown> {
   observations?: string;
   status: "pending" | "approved" | "rejected";
 }
-
 export default function RecordsManagement() {
   const { data: session, status } = useSession();
   const { hasPermission } = usePermissions();
   const { success, error } = useNotifications();
   const [products, setProducts] = useState<Product[]>([]);
-
   const createModal = useModal<ProductRecord>();
   const editModal = useModal<ProductRecord>();
   const viewModal = useModal<ProductRecord>();
   const confirmModal = useConfirmModal();
-
   const {
     data: records,
     loading,
@@ -53,16 +48,13 @@ export default function RecordsManagement() {
         limit: 100,
         search: searchTerm,
       });
-
       if (!response.success || !response.data) {
         throw new Error("Error fetching records");
       }
-
       return response.data.records;
     },
     placeholder: "Buscar registros por lote, producto o estado...",
   });
-
   const fetchProducts = useCallback(async () => {
     try {
       const response = await productService.getProducts({
@@ -75,13 +67,11 @@ export default function RecordsManagement() {
       console.error("Error fetching products:", error);
     }
   }, []);
-
   useEffect(() => {
     if (session && hasPermission("records:read")) {
       fetchProducts();
     }
   }, [session, hasPermission, fetchProducts]);
-
   const handleCreateRecord = useCallback(
     async (data: RecordFormData) => {
       try {
@@ -95,7 +85,6 @@ export default function RecordsManagement() {
           observations: data.observations,
           status: data.status,
         });
-
         if (response.success && response.data) {
           createModal.close();
           await refetchRecords();
@@ -115,11 +104,9 @@ export default function RecordsManagement() {
     },
     [createModal, refetchRecords, success, error]
   );
-
   const handleEditRecord = useCallback(
     async (data: RecordFormData) => {
       if (!editModal.data) return;
-
       try {
         const response = await recordService.updateRecord(editModal.data.id, {
           productId: data.productId,
@@ -131,7 +118,6 @@ export default function RecordsManagement() {
           observations: data.observations,
           status: data.status,
         });
-
         if (response.success && response.data) {
           editModal.close();
           await refetchRecords();
@@ -154,7 +140,6 @@ export default function RecordsManagement() {
     },
     [editModal, refetchRecords, success, error]
   );
-
   const handleDeleteRecord = useCallback(
     async (record: ProductRecord) => {
       if (!recordService.canDeleteRecord(record)) {
@@ -164,7 +149,6 @@ export default function RecordsManagement() {
         );
         return;
       }
-
       confirmModal.confirm({
         title: "Eliminar Registro",
         message: `¿Estás seguro de que quieres eliminar el registro "${record.internalLot}"?`,
@@ -173,7 +157,6 @@ export default function RecordsManagement() {
         onConfirm: async () => {
           try {
             const response = await recordService.deleteRecord(record.id);
-
             if (response.success) {
               await refetchRecords();
               success(
@@ -200,7 +183,6 @@ export default function RecordsManagement() {
     },
     [confirmModal, refetchRecords, success, error]
   );
-
   const generatePDFDocument = useCallback(
     async (record: ProductRecord) => {
       try {
@@ -208,7 +190,6 @@ export default function RecordsManagement() {
           controlService.getQualityControl(record.id),
           import("jspdf").then((module) => module.default),
         ]);
-
         if (!response.success || !response.data) {
           error(
             "Error al obtener datos",
@@ -216,19 +197,15 @@ export default function RecordsManagement() {
           );
           return null;
         }
-
         const { record: recordData, controls, photos } = response.data;
         const doc = new jsPDF();
-
         doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
         doc.text("Registro de Producto", 105, 15, { align: "center" });
         doc.line(10, 20, 200, 20);
-
         doc.setFontSize(12);
         doc.setFont("helvetica", "normal");
         let currentY = 30;
-
         doc.text(
           `Fecha y Hora: ${new Date(
             recordData.registrationDate
@@ -251,7 +228,6 @@ export default function RecordsManagement() {
         currentY += 10;
         doc.text(`Verificado por: Administrador`, 10, currentY);
         currentY += 10;
-
         if (recordData.observations) {
           doc.text(
             `Observaciones Generales: ${recordData.observations}`,
@@ -260,7 +236,6 @@ export default function RecordsManagement() {
           );
           currentY += 10;
         }
-
         currentY += 10;
         doc.line(10, currentY, 200, currentY);
         currentY += 10;
@@ -268,20 +243,16 @@ export default function RecordsManagement() {
         doc.text("Control de Calidad", 10, currentY);
         doc.setFont("helvetica", "normal");
         currentY += 15;
-
         const alertas: string[] = [];
-
         if (controls && controls.length > 0) {
           doc.setFillColor(200, 200, 200);
           doc.rect(10, currentY, 190, 12, "F");
           doc.rect(10, currentY, 190, 12, "S");
-
           doc.line(10, currentY, 10, currentY + 12);
           doc.line(60, currentY, 60, currentY + 12);
           doc.line(120, currentY, 120, currentY + 12);
           doc.line(150, currentY, 150, currentY + 12);
           doc.line(200, currentY, 200, currentY + 12);
-
           doc.setFont("helvetica", "bold");
           doc.text("Parámetro", 12, currentY + 8);
           doc.text("Rango/Especificación", 62, currentY + 8);
@@ -289,24 +260,20 @@ export default function RecordsManagement() {
           doc.text("Observaciones", 152, currentY + 8);
           doc.setFont("helvetica", "normal");
           currentY += 12;
-
           for (const control of controls) {
             if (currentY > 250) {
               doc.addPage();
               currentY = 20;
             }
-
             const parametro = control.parameterName || "";
             const especificacion = control.fullRange || "";
             const controlValue =
               control.textControl || control.controlValue?.toString() || "";
             const observacion = control.observation || "";
             const fueraDeRango = control.outOfRange;
-
             if (fueraDeRango && control.alertMessage) {
               alertas.push(`${parametro}: ${control.alertMessage}`);
             }
-
             const wrappedParametro = doc.splitTextToSize(parametro, 48);
             const wrappedEspecificacion = doc.splitTextToSize(
               especificacion,
@@ -314,7 +281,6 @@ export default function RecordsManagement() {
             );
             const wrappedControlValue = doc.splitTextToSize(controlValue, 28);
             const wrappedObservacion = doc.splitTextToSize(observacion, 48);
-
             const maxLines = Math.max(
               Array.isArray(wrappedParametro) ? wrappedParametro.length : 1,
               Array.isArray(wrappedEspecificacion)
@@ -325,25 +291,19 @@ export default function RecordsManagement() {
                 : 1,
               Array.isArray(wrappedObservacion) ? wrappedObservacion.length : 1
             );
-
             const lineHeight = 5;
             const rowHeight = Math.max(10, maxLines * lineHeight + 4);
-
             if (currentY + rowHeight > 280) {
               doc.addPage();
               currentY = 20;
             }
-
             doc.rect(10, currentY, 190, rowHeight, "S");
             doc.line(60, currentY, 60, currentY + rowHeight);
             doc.line(120, currentY, 120, currentY + rowHeight);
             doc.line(150, currentY, 150, currentY + rowHeight);
-
             const textStartY = currentY + 4;
-
             doc.text(wrappedParametro, 12, textStartY);
             doc.text(wrappedEspecificacion, 62, textStartY);
-
             if (fueraDeRango) {
               doc.setTextColor(255, 0, 0);
               doc.text(wrappedControlValue, 122, textStartY);
@@ -351,7 +311,6 @@ export default function RecordsManagement() {
             } else {
               doc.text(wrappedControlValue, 122, textStartY);
             }
-
             doc.text(wrappedObservacion, 152, textStartY);
             currentY += rowHeight;
           }
@@ -363,7 +322,6 @@ export default function RecordsManagement() {
           );
           currentY += 10;
         }
-
         if (alertas.length > 0) {
           currentY += 10;
           doc.setFont("helvetica", "bold");
@@ -371,28 +329,23 @@ export default function RecordsManagement() {
           doc.text("ALERTAS - VALORES FUERA DE RANGO:", 10, currentY);
           doc.setFont("helvetica", "normal");
           currentY += 10;
-
           alertas.forEach((alerta: string) => {
             doc.text(`• ${alerta}`, 15, currentY);
             currentY += 8;
           });
           doc.setTextColor(0, 0, 0);
         }
-
         currentY += 10;
         if (currentY > 250) {
           doc.addPage();
           currentY = 20;
         }
-
         if (photos && photos.length > 0) {
           doc.text("Evidencia Fotográfica", 10, currentY);
           currentY += 10;
-
           const imagePromises = photos.map(async (photo) => {
             try {
               const base64Image = `data:image/jpeg;base64,${photo.base64Data}`;
-
               return new Promise<{
                 photo: typeof photo;
                 dimensions: { width: number; height: number };
@@ -403,7 +356,6 @@ export default function RecordsManagement() {
                   const maxWidth = 140;
                   const maxHeight = 120;
                   let { width, height } = img;
-
                   if (width > maxWidth) {
                     height = (height * maxWidth) / width;
                     width = maxWidth;
@@ -412,7 +364,6 @@ export default function RecordsManagement() {
                     width = (width * maxHeight) / height;
                     height = maxHeight;
                   }
-
                   resolve({
                     photo,
                     dimensions: { width, height },
@@ -428,18 +379,14 @@ export default function RecordsManagement() {
               return null;
             }
           });
-
           const processedImages = await Promise.allSettled(imagePromises);
-
           for (const result of processedImages) {
             if (result.status === "fulfilled" && result.value) {
               const { dimensions, base64 } = result.value;
-
               if (currentY + dimensions.height > 280) {
                 doc.addPage();
                 currentY = 20;
               }
-
               doc.addImage(
                 base64,
                 "JPEG",
@@ -457,7 +404,6 @@ export default function RecordsManagement() {
         } else {
           doc.text("No se adjuntaron imágenes.", 10, currentY);
         }
-
         return { doc, recordData };
       } catch (err) {
         console.error("Error generating PDF document:", err);
@@ -467,23 +413,18 @@ export default function RecordsManagement() {
     },
     [error]
   );
-
   const handlePreviewPDF = useCallback(
     async (record: ProductRecord) => {
       success(
         "Generando vista previa...",
         "Por favor espera mientras se genera el PDF"
       );
-
       try {
         const result = await generatePDFDocument(record);
         if (!result) return;
-
         const { doc } = result;
-
         const pdfBlob = doc.output("blob");
         const blobUrl = URL.createObjectURL(pdfBlob);
-
         const previewWindow = window.open(blobUrl, "_blank");
         if (!previewWindow) {
           error(
@@ -493,11 +434,9 @@ export default function RecordsManagement() {
           URL.revokeObjectURL(blobUrl);
           return;
         }
-
         setTimeout(() => {
           URL.revokeObjectURL(blobUrl);
         }, 5000);
-
         success(
           "Vista previa lista",
           "El PDF se ha abierto en una nueva ventana"
@@ -512,29 +451,23 @@ export default function RecordsManagement() {
     },
     [generatePDFDocument, success, error]
   );
-
   const handleDownloadPDF = useCallback(
     async (record: ProductRecord) => {
       success(
         "Generando PDF...",
         "Por favor espera mientras se procesa el documento"
       );
-
       try {
         const result = await generatePDFDocument(record);
         if (!result) return;
-
         const { doc, recordData } = result;
-
         const productName =
           recordData.product?.name?.replace(/[^a-zA-Z0-9]/g, "_") || "Registro";
         const date = new Date(recordData.registrationDate)
           .toLocaleDateString("es-ES")
           .replace(/\//g, "-");
         const filename = `${productName}_${date}_${recordData.internalLot}.pdf`;
-
         doc.save(filename);
-
         success("PDF descargado", `Archivo guardado como: ${filename}`);
       } catch (err) {
         console.error("Error downloading PDF:", err);
@@ -546,7 +479,6 @@ export default function RecordsManagement() {
     },
     [generatePDFDocument, success, error]
   );
-
   const columns: ColumnDef<ProductRecord>[] = useMemo(
     () => [
       {
@@ -600,7 +532,6 @@ export default function RecordsManagement() {
     ],
     []
   );
-
   const actions: ActionDef<ProductRecord>[] = useMemo(
     () => [
       {
@@ -625,7 +556,6 @@ export default function RecordsManagement() {
     ],
     [handleDeleteRecord, handlePreviewPDF, handleDownloadPDF, hasPermission]
   );
-
   if (status === "loading") {
     return (
       <PageLayout title="Cargando...">
@@ -636,7 +566,6 @@ export default function RecordsManagement() {
       </PageLayout>
     );
   }
-
   if (!session || !hasPermission("records:read")) {
     return (
       <PageLayout title="Acceso Denegado">
@@ -652,7 +581,6 @@ export default function RecordsManagement() {
       </PageLayout>
     );
   }
-
   return (
     <>
       <PageLayout title="Gestión de Registros de Productos">
@@ -665,8 +593,7 @@ export default function RecordsManagement() {
           search={searchProps}
         />
       </PageLayout>
-
-      {/* Modal de Crear Registro */}
+      {}
       <RecordFormModal
         isOpen={createModal.isOpen}
         onClose={createModal.close}
@@ -674,8 +601,7 @@ export default function RecordsManagement() {
         products={products}
         title="Crear Registro"
       />
-
-      {/* Modal de Editar Registro */}
+      {}
       <RecordFormModal
         isOpen={editModal.isOpen}
         onClose={editModal.close}
@@ -684,8 +610,7 @@ export default function RecordsManagement() {
         record={editModal.data}
         title="Editar Registro"
       />
-
-      {/* Modal de Ver Registro */}
+      {}
       <RecordViewModal
         isOpen={viewModal.isOpen}
         onClose={viewModal.close}
@@ -694,7 +619,6 @@ export default function RecordsManagement() {
     </>
   );
 }
-
 interface RecordFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -703,7 +627,6 @@ interface RecordFormModalProps {
   record?: ProductRecord;
   title: string;
 }
-
 function RecordFormModal({
   isOpen,
   onClose,
@@ -737,7 +660,6 @@ function RecordFormModal({
       await onSubmit(data);
     },
   });
-
   return (
     <FormModal
       isOpen={isOpen}
@@ -774,7 +696,6 @@ function RecordFormModal({
               </p>
             )}
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Lote Interno *
@@ -795,7 +716,6 @@ function RecordFormModal({
             )}
           </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -811,7 +731,6 @@ function RecordFormModal({
               placeholder="Lote del proveedor"
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Cantidad *
@@ -834,7 +753,6 @@ function RecordFormModal({
             )}
           </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -854,7 +772,6 @@ function RecordFormModal({
               </p>
             )}
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Fecha de Vencimiento
@@ -869,7 +786,6 @@ function RecordFormModal({
             />
           </div>
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Estado
@@ -886,7 +802,6 @@ function RecordFormModal({
             <option value="rejected">Rechazado</option>
           </select>
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Observaciones
@@ -905,16 +820,13 @@ function RecordFormModal({
     </FormModal>
   );
 }
-
 interface RecordViewModalProps {
   isOpen: boolean;
   onClose: () => void;
   record?: ProductRecord;
 }
-
 function RecordViewModal({ isOpen, onClose, record }: RecordViewModalProps) {
   if (!record) return null;
-
   return (
     <FormModal
       isOpen={isOpen}
@@ -934,7 +846,6 @@ function RecordViewModal({ isOpen, onClose, record }: RecordViewModalProps) {
               {record.product?.code && ` (${record.product.code})`}
             </div>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Lote Interno
@@ -944,7 +855,6 @@ function RecordViewModal({ isOpen, onClose, record }: RecordViewModalProps) {
             </div>
           </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -954,7 +864,6 @@ function RecordViewModal({ isOpen, onClose, record }: RecordViewModalProps) {
               {record.supplierLot || "-"}
             </div>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Cantidad
@@ -964,7 +873,6 @@ function RecordViewModal({ isOpen, onClose, record }: RecordViewModalProps) {
             </div>
           </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -974,7 +882,6 @@ function RecordViewModal({ isOpen, onClose, record }: RecordViewModalProps) {
               {new Date(record.registrationDate).toLocaleDateString()}
             </div>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Fecha de Vencimiento
@@ -986,7 +893,6 @@ function RecordViewModal({ isOpen, onClose, record }: RecordViewModalProps) {
             </div>
           </div>
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Estado
@@ -997,7 +903,6 @@ function RecordViewModal({ isOpen, onClose, record }: RecordViewModalProps) {
             </Badge>
           </div>
         </div>
-
         {record.observations && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1008,7 +913,6 @@ function RecordViewModal({ isOpen, onClose, record }: RecordViewModalProps) {
             </div>
           </div>
         )}
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1018,7 +922,6 @@ function RecordViewModal({ isOpen, onClose, record }: RecordViewModalProps) {
               {new Date(record.createdAt).toLocaleString()}
             </div>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Actualizado
@@ -1028,7 +931,6 @@ function RecordViewModal({ isOpen, onClose, record }: RecordViewModalProps) {
             </div>
           </div>
         </div>
-
         {record.approvedBy && record.approvalDate && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -1039,7 +941,6 @@ function RecordViewModal({ isOpen, onClose, record }: RecordViewModalProps) {
                 {record.approver?.fullName || "Usuario desconocido"}
               </div>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Fecha de Aprobación

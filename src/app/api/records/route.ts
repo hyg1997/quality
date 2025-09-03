@@ -3,16 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-
-// GET /api/records - Obtener todos los registros
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session || !hasPermission(session, PERMISSIONS.CONTENT?.READ)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -22,10 +18,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get("userId");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
-
     const skip = (page - 1) * limit;
-
-    // Build where clause
     const where: {
       OR?: Array<{
         internalLot?: { contains: string };
@@ -41,7 +34,6 @@ export async function GET(request: NextRequest) {
         lte?: Date;
       };
     } = {};
-
     if (search) {
       where.OR = [
         { internalLot: { contains: search } },
@@ -54,19 +46,15 @@ export async function GET(request: NextRequest) {
         },
       ];
     }
-
     if (productId) {
       where.productId = productId;
     }
-
     if (status) {
       where.status = status;
     }
-
     if (userId) {
       where.userId = userId;
     }
-
     if (startDate || endDate) {
       where.registrationDate = {};
       if (startDate) {
@@ -76,7 +64,6 @@ export async function GET(request: NextRequest) {
         where.registrationDate.lte = new Date(endDate);
       }
     }
-
     const [records, total] = await Promise.all([
       prisma.record.findMany({
         where,
@@ -111,7 +98,6 @@ export async function GET(request: NextRequest) {
       }),
       prisma.record.count({ where }),
     ]);
-
     return NextResponse.json({
       records,
       total,
@@ -126,16 +112,12 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-// POST /api/records - Crear nuevo registro
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session || !hasPermission(session, PERMISSIONS.CONTENT?.CREATE)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const {
       productId,
       internalLot,
@@ -146,46 +128,36 @@ export async function POST(request: NextRequest) {
       observations,
       status = "pending",
     } = await request.json();
-
-    // Validaciones
     if (!productId || !internalLot || !quantity) {
       return NextResponse.json(
         { error: "Producto, lote interno y cantidad son requeridos" },
         { status: 400 }
       );
     }
-
     if (quantity <= 0) {
       return NextResponse.json(
         { error: "La cantidad debe ser mayor a 0" },
         { status: 400 }
       );
     }
-
-    // Verificar que el producto existe
     const product = await prisma.product.findUnique({
       where: { id: productId },
     });
-
     if (!product) {
       return NextResponse.json(
         { error: "Producto no encontrado" },
         { status: 404 }
       );
     }
-
-    // Verificar que el lote interno sea único
     const existingRecord = await prisma.record.findFirst({
       where: { internalLot },
     });
-
     if (existingRecord) {
       return NextResponse.json(
         { error: "El lote interno ya existe" },
         { status: 400 }
       );
     }
-
     const record = await prisma.record.create({
       data: {
         productId,
@@ -215,8 +187,6 @@ export async function POST(request: NextRequest) {
         },
       },
     });
-
-    // Crear log de auditoría
     await prisma.auditLog.create({
       data: {
         userId: session.user.id,
@@ -233,7 +203,6 @@ export async function POST(request: NextRequest) {
         }),
       },
     });
-
     return NextResponse.json(record, { status: 201 });
   } catch (error) {
     console.error("Error creating record:", error);

@@ -1,16 +1,12 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { Card, CardContent, CardHeader, Badge } from "@/components/ui";
-
 export default async function UserInfo() {
   const session = await getServerSession(authOptions);
-
   if (!session) {
     return null;
   }
-
   const { user } = session;
-
   return (
     <Card>
       <CardHeader>
@@ -31,7 +27,6 @@ export default async function UserInfo() {
               <p className="text-sm text-gray-600">{user.email}</p>
             </div>
           </div>
-
           <div>
             <p className="text-sm font-medium text-gray-700 mb-2">
               Roles Asignados
@@ -44,7 +39,6 @@ export default async function UserInfo() {
               )) || <Badge variant="default">Sin roles asignados</Badge>}
             </div>
           </div>
-
           <div>
             <p className="text-sm font-medium text-gray-700 mb-2">
               Permisos Activos

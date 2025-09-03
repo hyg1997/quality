@@ -1,6 +1,4 @@
 import { apiClient, type ApiResponse } from "./base";
-
-// Types for Control API
 export interface Control {
   id: string;
   recordId: string;
@@ -24,7 +22,6 @@ export interface Control {
     unit?: string;
   };
 }
-
 export interface Photo {
   id: string;
   recordId: string;
@@ -32,7 +29,6 @@ export interface Photo {
   base64Data: string;
   createdAt: string;
 }
-
 export interface QualityControlRecord {
   id?: string;
   productId: string;
@@ -45,7 +41,6 @@ export interface QualityControlRecord {
   controls: CreateControlData[];
   photos: CreatePhotoData[];
 }
-
 export interface CreateControlData {
   parameterId?: string;
   parameterName: string;
@@ -57,12 +52,10 @@ export interface CreateControlData {
   outOfRange?: boolean;
   alertMessage?: string;
 }
-
 export interface CreatePhotoData {
   filename: string;
   base64Data: string;
 }
-
 export interface ParameterForControl {
   id: string;
   name: string;
@@ -74,29 +67,17 @@ export interface ParameterForControl {
   required: boolean;
   active: boolean;
 }
-
 export class ControlService {
-  /**
-   * Get parameters by product ID for quality control
-   */
   async getParametersForControl(
     productId: string
   ): Promise<ApiResponse<ParameterForControl[]>> {
     return apiClient.get<ParameterForControl[]>(`/api/controls/parameters/${productId}`);
   }
-
-  /**
-   * Create quality control record with controls and photos
-   */
   async createQualityControl(
     data: QualityControlRecord
   ): Promise<ApiResponse<{ recordId: string; message: string }>> {
     return apiClient.post<{ recordId: string; message: string }>("/api/controls", data);
   }
-
-  /**
-   * Get quality control record with controls and photos
-   */
   async getQualityControl(recordId: string): Promise<ApiResponse<{
     record: {
       id: string;
@@ -148,10 +129,6 @@ export class ControlService {
       photos: Photo[];
     }>(`/api/controls/${recordId}`);
   }
-
-  /**
-   * Validate control value
-   */
   validateControlValue(
     value: string,
     parameterType: string,
@@ -160,19 +137,16 @@ export class ControlService {
     maxRange?: number
   ): { isValid: boolean; message?: string } {
     if (!value || value.trim() === '') {
-      return { isValid: true }; // Empty values are considered valid
+      return { isValid: true };
     }
-
     if (parameterType === "range" || parameterType === "numeric") {
       const numValue = parseFloat(value);
-      
       if (isNaN(numValue)) {
         return {
           isValid: false,
           message: `Valor '${value}' no es numérico.`
         };
       }
-
       if (parameterType === "range" && minRange !== undefined && maxRange !== undefined) {
         if (numValue < minRange || numValue > maxRange) {
           return {
@@ -185,7 +159,6 @@ export class ControlService {
       if (expectedValue) {
         const normalizedExpected = this.normalizeText(expectedValue);
         const normalizedEntered = this.normalizeText(value);
-        
         if (normalizedEntered !== normalizedExpected) {
           return {
             isValid: false,
@@ -194,16 +167,10 @@ export class ControlService {
         }
       }
     }
-
     return { isValid: true };
   }
-
-  /**
-   * Normalize text for comparison
-   */
   normalizeText(text: string): string {
     if (typeof text !== "string") return "";
-    
     return text
       .toLowerCase()
       .normalize("NFD")
@@ -215,10 +182,6 @@ export class ControlService {
       .replace(/\s+/g, " ")
       .trim();
   }
-
-  /**
-   * Convert file to base64
-   */
   fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -227,10 +190,6 @@ export class ControlService {
       reader.onerror = (error) => reject(error);
     });
   }
-
-  /**
-   * Get full range display text
-   */
   getFullRangeText(
     parameterType: string,
     expectedValue?: string,
@@ -247,10 +206,6 @@ export class ControlService {
     }
     return "N/A";
   }
-
-  /**
-   * Format parameter type for display
-   */
   formatParameterType(type: string): string {
     switch (type) {
       case "range":
@@ -263,20 +218,11 @@ export class ControlService {
         return type;
     }
   }
-
-  /**
-   * Get status color for validation
-   */
   getValidationColor(isValid: boolean): string {
     return isValid ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50";
   }
-
-  /**
-   * Check if record can generate PDF
-   */
   canGeneratePDF(record: QualityControlRecord): boolean {
     return !!(record.productId && record.internalLot && record.quantity && record.verifiedBy);
   }
 }
-
 export const controlService = new ControlService();

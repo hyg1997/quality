@@ -3,21 +3,18 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui";
 import { Users, Check, Package, Clock } from "lucide-react";
-
 interface StatsData {
   totalUsers: number;
   activeUsers: number;
   totalProducts: number;
   pendingReports: number;
 }
-
 async function getStats(): Promise<StatsData> {
   const [totalUsers, activeUsers, totalProducts] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { status: "ACTIVE" } }),
     prisma.user.count(),
   ]);
-
   return {
     totalUsers,
     activeUsers,
@@ -25,16 +22,12 @@ async function getStats(): Promise<StatsData> {
     pendingReports: 23,
   };
 }
-
 export default async function DashboardStats() {
   const session = await getServerSession(authOptions);
-
   if (!session) {
     return null;
   }
-
   const stats = await getStats();
-
   const statsCards = [
     {
       title: "Usuarios Totales",
@@ -61,7 +54,6 @@ export default async function DashboardStats() {
       color: "bg-orange-500",
     },
   ];
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {statsCards.map((stat, index) => (

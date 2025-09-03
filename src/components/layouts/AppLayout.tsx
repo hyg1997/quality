@@ -7,7 +7,6 @@ interface PageLayoutProps {
   actions?: React.ReactNode;
   loading?: boolean;
 }
-
 export function PageLayout({
   children,
   title,
@@ -17,7 +16,6 @@ export function PageLayout({
   if (loading) {
     return <PageLoading />;
   }
-
   return (
     <div className="space-y-6 px-4 sm:px-6 lg:px-8">
       {(title || actions) && (
@@ -32,7 +30,6 @@ export function PageLayout({
           )}
         </div>
       )}
-
       <ErrorBoundary>
         <Suspense fallback={<PageLoading />}>{children}</Suspense>
       </ErrorBoundary>

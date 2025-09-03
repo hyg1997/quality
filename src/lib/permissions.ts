@@ -1,5 +1,4 @@
 import { Session } from "next-auth";
-
 export interface Permission {
   id: string;
   name: string;
@@ -7,14 +6,12 @@ export interface Permission {
   resource: string;
   action: string;
 }
-
 export interface Role {
   id: string;
   name: string;
   displayName: string;
   level: number;
 }
-
 export function hasPermission(
   session: Session | null,
   permissionName: string | undefined
@@ -22,55 +19,43 @@ export function hasPermission(
   if (!session?.user?.permissions || !permissionName) {
     return false;
   }
-
   if (isAdmin(session)) {
     return true;
   }
-
   return session.user.permissions.some(
     (permission) => permission.name === permissionName
   );
 }
-
 export function isAdmin(session: Session | null): boolean {
   if (!session?.user?.roles) {
     return false;
   }
-
   return session.user.roles.some((role) => role.level >= 80);
 }
-
 export function isSuperAdmin(session: Session | null): boolean {
   if (!session?.user?.roles) {
     return false;
   }
-
   return session.user.roles.some((role) => role.level >= 100);
 }
-
 export function getHighestRoleLevel(session: Session | null): number {
   if (!session?.user?.roles || session.user.roles.length === 0) {
     return 0;
   }
-
   return Math.max(...session.user.roles.map((role) => role.level));
 }
-
 export function hasRole(session: Session | null, roleName: string): boolean {
   if (!session?.user?.roles) {
     return false;
   }
-
   return session.user.roles.some((role) => role.name === roleName);
 }
-
 export function hasMinimumRoleLevel(
   session: Session | null,
   minimumLevel: number
 ): boolean {
   return getHighestRoleLevel(session) >= minimumLevel;
 }
-
 export function hasAnyPermission(
   session: Session | null,
   permissionNames: string[]
@@ -78,18 +63,15 @@ export function hasAnyPermission(
   if (!session?.user?.permissions) {
     return false;
   }
-
   if (isAdmin(session)) {
     return true;
   }
-
   return permissionNames.some((permissionName) =>
     session.user.permissions.some(
       (permission) => permission.name === permissionName
     )
   );
 }
-
 export function hasAllPermissions(
   session: Session | null,
   permissionNames: string[]
@@ -97,18 +79,15 @@ export function hasAllPermissions(
   if (!session?.user?.permissions) {
     return false;
   }
-
   if (isAdmin(session)) {
     return true;
   }
-
   return permissionNames.every((permissionName) =>
     session.user.permissions.some(
       (permission) => permission.name === permissionName
     )
   );
 }
-
 export function getPermissionsByResource(
   session: Session | null,
   resource: string
@@ -116,12 +95,10 @@ export function getPermissionsByResource(
   if (!session?.user?.permissions) {
     return [];
   }
-
   return session.user.permissions.filter(
     (permission) => permission.resource === resource
   );
 }
-
 export function canPerformAction(
   session: Session | null,
   resource: string,
@@ -130,18 +107,14 @@ export function canPerformAction(
   if (!session?.user?.permissions) {
     return false;
   }
-
   if (isAdmin(session)) {
     return true;
   }
-
   return session.user.permissions.some(
     (permission) =>
       permission.resource === resource && permission.action === action
   );
 }
-
-// Constantes de permisos para facilitar el uso (basadas en el seed moderno)
 export const PERMISSIONS = {
   USERS: {
     CREATE: "users:create",
@@ -177,7 +150,6 @@ export const PERMISSIONS = {
     DELETE: "content:delete",
     PUBLISH: "content:publish",
   },
-  // Alias para compatibilidad con código existente
   PRODUCTS: {
     CREATE: "content:create",
     READ: "content:read",

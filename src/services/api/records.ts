@@ -1,6 +1,4 @@
 import { apiClient, type ApiResponse } from "./base";
-
-// Types for Record API
 export interface ProductRecord extends Record<string, unknown> {
   id: string;
   productId: string;
@@ -32,7 +30,6 @@ export interface ProductRecord extends Record<string, unknown> {
     email: string;
   };
 }
-
 export interface CreateRecordData {
   productId: string;
   internalLot: string;
@@ -43,7 +40,6 @@ export interface CreateRecordData {
   observations?: string;
   status?: "pending" | "approved" | "rejected";
 }
-
 export interface UpdateRecordData {
   productId?: string;
   internalLot?: string;
@@ -54,7 +50,6 @@ export interface UpdateRecordData {
   observations?: string;
   status?: "pending" | "approved" | "rejected";
 }
-
 export interface RecordsQueryParams {
   page?: number;
   limit?: number;
@@ -65,11 +60,7 @@ export interface RecordsQueryParams {
   startDate?: string;
   endDate?: string;
 }
-
 export class RecordService {
-  /**
-   * Get all records with pagination and filters
-   */
   async getRecords(params?: RecordsQueryParams): Promise<
     ApiResponse<{
       records: ProductRecord[];
@@ -79,7 +70,6 @@ export class RecordService {
     }>
   > {
     const searchParams = new URLSearchParams();
-
     if (params?.page) searchParams.set("page", params.page.toString());
     if (params?.limit) searchParams.set("limit", params.limit.toString());
     if (params?.search) searchParams.set("search", params.search);
@@ -88,10 +78,8 @@ export class RecordService {
     if (params?.userId) searchParams.set("userId", params.userId);
     if (params?.startDate) searchParams.set("startDate", params.startDate);
     if (params?.endDate) searchParams.set("endDate", params.endDate);
-
     const queryString = searchParams.toString();
     const url = `/api/records${queryString ? `?${queryString}` : ""}`;
-
     return apiClient.get<{
       records: ProductRecord[];
       total: number;
@@ -99,10 +87,6 @@ export class RecordService {
       limit: number;
     }>(url);
   }
-
-  /**
-   * Get records by product ID
-   */
   async getRecordsByProduct(
     productId: string
   ): Promise<
@@ -120,50 +104,26 @@ export class RecordService {
       limit: number;
     }>(`/api/records?productId=${productId}&limit=1000`);
   }
-
-  /**
-   * Get a single record by ID
-   */
   async getRecord(id: string): Promise<ApiResponse<ProductRecord>> {
     return apiClient.get<ProductRecord>(`/api/records/${id}`);
   }
-
-  /**
-   * Create a new record
-   */
   async createRecord(
     data: CreateRecordData
   ): Promise<ApiResponse<ProductRecord>> {
     return apiClient.post<ProductRecord>("/api/records", data);
   }
-
-  /**
-   * Update an existing record
-   */
   async updateRecord(
     id: string,
     data: UpdateRecordData
   ): Promise<ApiResponse<ProductRecord>> {
     return apiClient.put<ProductRecord>(`/api/records/${id}`, data);
   }
-
-  /**
-   * Delete a record
-   */
   async deleteRecord(id: string): Promise<ApiResponse<void>> {
     return apiClient.delete<void>(`/api/records/${id}`);
   }
-
-  /**
-   * Approve a record
-   */
   async approveRecord(id: string): Promise<ApiResponse<ProductRecord>> {
     return apiClient.put<ProductRecord>(`/api/records/${id}/approve`, {});
   }
-
-  /**
-   * Reject a record
-   */
   async rejectRecord(
     id: string,
     reason?: string
@@ -172,10 +132,6 @@ export class RecordService {
       reason,
     });
   }
-
-  /**
-   * Get record statistics
-   */
   async getRecordStats(): Promise<
     ApiResponse<{
       total: number;
@@ -203,62 +159,33 @@ export class RecordService {
       byStatus: Record<string, number>;
     }>("/api/records/stats");
   }
-
-  /**
-   * Validate internal lot uniqueness
-   */
   async validateInternalLot(
     internalLot: string,
     excludeId?: string
   ): Promise<ApiResponse<{ available: boolean }>> {
     const params = new URLSearchParams({ internalLot });
     if (excludeId) params.set("excludeId", excludeId);
-
     return apiClient.get<{ available: boolean }>(
       `/api/records/validate-lot?${params.toString()}`
     );
   }
-
-  /**
-   * Format record display name
-   */
   formatRecordDisplayName(record: ProductRecord): string {
     return `${record.internalLot} - ${
       record.product?.name || "Producto desconocido"
     }`;
   }
-
-  /**
-   * Check if record can be edited
-   */
   canEditRecord(record: ProductRecord): boolean {
     return record.status === "pending";
   }
-
-  /**
-   * Check if record can be deleted
-   */
   canDeleteRecord(record: ProductRecord): boolean {
     return record.status === "pending";
   }
-
-  /**
-   * Check if record can be approved
-   */
   canApproveRecord(record: ProductRecord): boolean {
     return record.status === "pending";
   }
-
-  /**
-   * Check if record can be rejected
-   */
   canRejectRecord(record: ProductRecord): boolean {
     return record.status === "pending";
   }
-
-  /**
-   * Get status color for UI
-   */
   getStatusColor(status: string): string {
     switch (status) {
       case "approved":
@@ -271,10 +198,6 @@ export class RecordService {
         return "bg-gray-100 text-gray-800";
     }
   }
-
-  /**
-   * Get status label for UI
-   */
   getStatusLabel(status: string): string {
     switch (status) {
       case "approved":
@@ -288,5 +211,4 @@ export class RecordService {
     }
   }
 }
-
 export const recordService = new RecordService();

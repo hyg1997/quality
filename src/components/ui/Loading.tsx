@@ -1,14 +1,12 @@
 import { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 import { RotateCw } from "lucide-react";
-
 interface LoadingProps extends HTMLAttributes<HTMLDivElement> {
   variant?: "spinner" | "dots" | "pulse" | "bars";
   size?: "sm" | "md" | "lg";
   text?: string;
   fullScreen?: boolean;
 }
-
 export function Loading({
   className,
   variant = "spinner",
@@ -22,21 +20,18 @@ export function Loading({
     md: "w-6 h-6",
     lg: "w-8 h-8",
   };
-
   const containerClasses = cn(
     "flex items-center justify-center",
     fullScreen && "fixed inset-0 bg-white/80 backdrop-blur-sm z-50",
     !fullScreen && "p-4",
     className
   );
-
   const renderLoader = () => {
     switch (variant) {
       case "spinner":
         return (
           <RotateCw className={cn("animate-spin text-blue-600", sizes[size])} />
         );
-
       case "dots":
         return (
           <div className="flex space-x-1">
@@ -59,7 +54,6 @@ export function Loading({
             ))}
           </div>
         );
-
       case "pulse":
         return (
           <div
@@ -69,7 +63,6 @@ export function Loading({
             )}
           />
         );
-
       case "bars":
         return (
           <div className="flex space-x-1">
@@ -92,14 +85,12 @@ export function Loading({
             ))}
           </div>
         );
-
       default:
         return (
           <RotateCw className={cn("animate-spin text-blue-600", sizes[size])} />
         );
     }
   };
-
   return (
     <div className={containerClasses} {...props}>
       <div className="flex flex-col items-center space-y-2">
@@ -122,7 +113,6 @@ export function Loading({
     </div>
   );
 }
-
 export function PageLoading({ text = "Cargando..." }: { text?: string }) {
   return (
     <Loading
@@ -134,9 +124,7 @@ export function PageLoading({ text = "Cargando..." }: { text?: string }) {
     />
   );
 }
-
 export function InlineLoading({ text }: { text?: string }) {
   return <Loading variant="spinner" size="sm" text={text} className="py-2" />;
 }
-
 export default Loading;
