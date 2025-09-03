@@ -22,8 +22,7 @@ export default withAuth(
     }
     if (pathname.startsWith('/settings')) {
       if (pathname.startsWith('/settings/system') || 
-          pathname.startsWith('/settings/audit') ||
-          pathname.startsWith('/settings/backup')) {
+           pathname.startsWith('/settings/backup')) {
         const isAdmin = token.roles?.some((r: { level: number }) => r.level >= 80)
         if (!isAdmin) {
           return NextResponse.redirect(new URL('/dashboard', req.url))

@@ -141,7 +141,6 @@ export const PERMISSIONS = {
   SYSTEM: {
     SETTINGS: "system:settings",
     BACKUP: "system:backup",
-    AUDIT: "system:audit",
   },
   CONTENT: {
     CREATE: "content:create",
