@@ -5,6 +5,7 @@ import AuthSessionProvider from "@/components/providers/session-provider";
 import { AppProvider } from "@/contexts/AppContext";
 import { NotificationContainer } from "@/components/ui/Notifications";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import PWAInstaller from "@/components/PWAInstaller";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -57,6 +58,7 @@ export default function RootLayout({
             <AuthSessionProvider>
               {children}
               <NotificationContainer />
+              <PWAInstaller />
             </AuthSessionProvider>
           </AppProvider>
         </ErrorBoundary>

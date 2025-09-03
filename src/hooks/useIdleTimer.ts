@@ -1,34 +1,34 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useCallback } from 'react';
-import { signOut } from 'next-auth/react';
+import { useEffect, useRef, useCallback } from "react";
+import { signOut } from "next-auth/react";
 
 interface UseIdleTimerOptions {
-  timeout: number; // in milliseconds
+  timeout: number;
   onIdle?: () => void;
   onWarning?: (remainingTime: number) => void;
-  warningTime?: number; // time before timeout to show warning
+  warningTime?: number;
   events?: string[];
   enabled?: boolean;
 }
 
 const DEFAULT_EVENTS = [
-  'mousedown',
-  'mousemove',
-  'keypress',
-  'scroll',
-  'touchstart',
-  'click',
-  'wheel'
+  "mousedown",
+  "mousemove",
+  "keypress",
+  "scroll",
+  "touchstart",
+  "click",
+  "wheel",
 ];
 
 export function useIdleTimer({
-  timeout = 60000, // 1 minute default
+  timeout = 60000,
   onIdle,
   onWarning,
-  warningTime = 15000, // 15 seconds before timeout
+  warningTime = 15000,
   events = DEFAULT_EVENTS,
-  enabled = true
+  enabled = true,
 }: UseIdleTimerOptions) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -37,38 +37,35 @@ export function useIdleTimer({
   const handleLogout = useCallback(async () => {
     try {
       await signOut({
-        callbackUrl: '/auth/signin',
-        redirect: true
+        callbackUrl: "/auth/signin",
+        redirect: true,
       });
     } catch (error) {
-      console.error('Error during automatic logout:', error);
-      // Force redirect if signOut fails
-      window.location.href = '/auth/signin';
+      console.error("Error during automatic logout:", error);
+
+      window.location.href = "/auth/signin";
     }
   }, []);
 
   const resetTimer = useCallback(() => {
     if (!enabled) return;
-    
+
     lastActivityRef.current = Date.now();
-    
-    // Clear existing timers
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
     if (warningTimeoutRef.current) {
       clearTimeout(warningTimeoutRef.current);
     }
-    
-    // Set warning timer
+
     if (onWarning && warningTime < timeout) {
       warningTimeoutRef.current = setTimeout(() => {
         const remainingTime = timeout - warningTime;
         onWarning(remainingTime);
       }, timeout - warningTime);
     }
-    
-    // Set logout timer
+
     timeoutRef.current = setTimeout(() => {
       if (onIdle) {
         onIdle();
@@ -91,15 +88,12 @@ export function useIdleTimer({
       return;
     }
 
-    // Start the timer
     resetTimer();
 
-    // Add event listeners
-    events.forEach(event => {
+    events.forEach((event) => {
       document.addEventListener(event, handleActivity, true);
     });
 
-    // Cleanup function
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
@@ -107,8 +101,8 @@ export function useIdleTimer({
       if (warningTimeoutRef.current) {
         clearTimeout(warningTimeoutRef.current);
       }
-      
-      events.forEach(event => {
+
+      events.forEach((event) => {
         document.removeEventListener(event, handleActivity, true);
       });
     };
@@ -141,7 +135,7 @@ export function useIdleTimer({
     getRemainingTime,
     pause,
     resume,
-    resetTimer: handleActivity
+    resetTimer: handleActivity,
   };
 }
 

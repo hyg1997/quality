@@ -94,19 +94,18 @@ export default function DashboardLayout({
     setShowIdleWarning(false);
     try {
       await signOut({
-        callbackUrl: '/auth/signin?message=session_expired',
-        redirect: true
+        callbackUrl: "/auth/signin?message=session_expired",
+        redirect: true,
       });
     } catch (error) {
-      console.error('Error during idle logout:', error);
-      window.location.href = '/auth/signin?message=session_expired';
+      console.error("Error during idle logout:", error);
+      window.location.href = "/auth/signin?message=session_expired";
     }
   };
 
-  // Auto logout after 1 minute of inactivity with 15-second warning
   const { resetTimer } = useIdleTimer({
-    timeout: 60000, // 1 minute
-    warningTime: 15000, // 15 seconds warning
+    timeout: 60000,
+    warningTime: 15000,
     enabled: !!session && !isSigningOut,
     onWarning: (remainingTime) => {
       console.log(`Warning: ${remainingTime}ms remaining before logout`);
@@ -114,9 +113,9 @@ export default function DashboardLayout({
       setShowIdleWarning(true);
     },
     onIdle: () => {
-      console.log('User has been idle for 1 minute. Logging out...');
+      console.log("User has been idle for 1 minute. Logging out...");
       handleLogout();
-    }
+    },
   });
 
   const handleExtendSession = () => {
@@ -393,7 +392,7 @@ export default function DashboardLayout({
           <div className="py-6">{children}</div>
         </main>
       </div>
-      
+
       <IdleWarning
         isVisible={showIdleWarning}
         remainingTime={warningRemainingTime}
