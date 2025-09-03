@@ -6,7 +6,7 @@ import { hasPermission, PERMISSIONS } from '@/lib/permissions'
 import bcrypt from 'bcryptjs'
 
 // GET /api/users - Obtener todos los usuarios
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -14,7 +14,43 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Obtener parámetros de búsqueda
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get('search')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = parseInt(searchParams.get('offset') || '0')
+
+    // Construir condiciones de búsqueda
+    const whereConditions: {
+      OR?: Array<{
+        email?: { contains: string };
+        username?: { contains: string };
+        fullName?: { contains: string };
+      }>;
+    } = {}
+    
+    if (search && search.trim().length > 0) {
+      whereConditions.OR = [
+        {
+          email: {
+            contains: search
+          }
+        },
+        {
+          username: {
+            contains: search
+          }
+        },
+        {
+          fullName: {
+            contains: search
+          }
+        }
+      ]
+    }
+
     const users = await prisma.user.findMany({
+      where: whereConditions,
       select: {
         id: true,
         email: true,
@@ -38,7 +74,9 @@ export async function GET() {
       },
       orderBy: {
         createdAt: 'desc'
-      }
+      },
+      take: limit,
+      skip: offset
     })
 
     // Transformar datos para incluir roles directamente

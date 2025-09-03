@@ -20,6 +20,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useModal, useConfirmModal } from "@/hooks/useModal";
 import { useForm } from "@/hooks/useForm";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useDataTableSearch } from "@/hooks/useDataTableSearch";
 
 interface Role extends Record<string, unknown> {
   id: string;
@@ -53,31 +54,35 @@ export default function RolesManagementPage() {
   const { data: session, status } = useSession();
   const { isAdmin, hasPermission } = usePermissions();
   const { success, error } = useNotifications();
-  const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [loading, setLoading] = useState(true);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
 
   const createModal = useModal<Role>();
   const editModal = useModal<Role>();
   const confirmModal = useConfirmModal();
 
-  const fetchRoles = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/roles");
-      if (response.ok) {
-        const data = await response.json();
-        setRoles(data);
-      } else {
-        console.error("Error fetching roles:", response.statusText);
+  // Hook para manejar búsqueda de roles
+  const {
+    data: roles,
+    loading,
+    searchProps,
+    refetch: refetchRoles,
+  } = useDataTableSearch<Role>({
+    fetchData: async (searchTerm?: string) => {
+      const url = new URL("/api/roles", window.location.origin);
+      if (searchTerm) {
+        url.searchParams.set("search", searchTerm);
       }
-    } catch (error) {
-      console.error("Error fetching roles:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        throw new Error("Error fetching roles");
+      }
+
+      return response.json();
+    },
+    placeholder: "Buscar roles por nombre o descripción...",
+  });
 
   const fetchPermissions = useCallback(async () => {
     setPermissionsLoading(true);
@@ -98,10 +103,9 @@ export default function RolesManagementPage() {
 
   useEffect(() => {
     if (session && hasPermission("roles:read")) {
-      fetchRoles();
       fetchPermissions();
     }
-  }, [session, hasPermission, fetchRoles, fetchPermissions]);
+  }, [session, hasPermission, fetchPermissions]);
 
   const handleCreateRole = useCallback(
     async (data: RoleFormData) => {
@@ -122,7 +126,7 @@ export default function RolesManagementPage() {
 
         if (response.ok) {
           createModal.close();
-          await fetchRoles();
+          await refetchRoles();
           success(
             "Rol creado",
             `El rol ${data.displayName} ha sido creado exitosamente`
@@ -138,7 +142,7 @@ export default function RolesManagementPage() {
         error("Error al crear rol", "Ha ocurrido un error inesperado");
       }
     },
-    [createModal, fetchRoles, success, error]
+    [createModal, refetchRoles, success, error]
   );
 
   const handleEditRole = useCallback(
@@ -162,7 +166,7 @@ export default function RolesManagementPage() {
 
         if (response.ok) {
           editModal.close();
-          await fetchRoles();
+          await refetchRoles();
           success(
             "Rol actualizado",
             `El rol ${data.displayName} ha sido actualizado exitosamente`
@@ -178,7 +182,7 @@ export default function RolesManagementPage() {
         error("Error al actualizar rol", "Ha ocurrido un error inesperado");
       }
     },
-    [editModal, fetchRoles, success, error]
+    [editModal, refetchRoles, success, error]
   );
 
   const handleDeleteRole = useCallback(
@@ -189,7 +193,7 @@ export default function RolesManagementPage() {
         });
 
         if (response.ok) {
-          await fetchRoles();
+          await refetchRoles();
           success(
             "Rol eliminado",
             `El rol ${role.displayName} ha sido eliminado exitosamente`
@@ -205,7 +209,7 @@ export default function RolesManagementPage() {
         error("Error al eliminar rol", "Ha ocurrido un error inesperado");
       }
     },
-    [fetchRoles, success, error]
+    [refetchRoles, success, error]
   );
 
   // Memoize columns definition to prevent recreation on every render
@@ -299,7 +303,7 @@ export default function RolesManagementPage() {
   );
 
   // Loading state
-  if (status === "loading" || loading || permissionsLoading) {
+  if (status === "loading" || permissionsLoading) {
     return (
       <PageLayout title="Gestión de Roles">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -361,6 +365,7 @@ export default function RolesManagementPage() {
           actions={actions}
           loading={loading}
           emptyMessage="No hay roles disponibles"
+          search={searchProps}
         />
       </PageLayout>
 
@@ -588,8 +593,6 @@ function RoleFormModal({
             ))}
           </div>
         </div>
-
-
       </div>
     </FormModal>
   );

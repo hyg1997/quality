@@ -1,60 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { hasPermission, PERMISSIONS } from "@/lib/permissions";
-import type { Session } from "next-auth";
-import Link from "next/link";
-import { Card, CardContent, CardHeader, Button, Badge } from "@/components/ui";
 import DashboardStats from "@/components/server/DashboardStats";
 import UserInfo from "@/components/server/UserInfo";
-
-function ModuleCard({
-  title,
-  description,
-  permissions,
-  buttonColor,
-  session,
-  href,
-}: {
-  title: string;
-  description: string;
-  permissions: Array<{ permission: string; label: string; color: string }>;
-  buttonColor: string;
-  session: Session;
-  href: string;
-}) {
-  const hasAccess = permissions.some((p) =>
-    hasPermission(session, p.permission)
-  );
-
-  if (!hasAccess) {
-    return null;
-  }
-
-  return (
-    <Card className="hover:shadow-md transition-shadow duration-200">
-      <CardHeader>
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        <p className="text-sm text-gray-600">{description}</p>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex flex-wrap gap-2 mb-4">
-          {permissions.map(
-            ({ permission, label, color }) =>
-              hasPermission(session, permission) && (
-                <Badge key={permission} className={color}>
-                  {label}
-                </Badge>
-              )
-          )}
-        </div>
-
-        <Link href={href}>
-          <Button className={`w-full ${buttonColor}`}>Acceder</Button>
-        </Link>
-      </CardContent>
-    </Card>
-  );
-}
 
 export default async function Dashboard() {
   const session = await getServerSession(authOptions);
@@ -74,99 +21,6 @@ export default async function Dashboard() {
     );
   }
 
-  const modules = [
-    {
-      id: "records",
-      title: "Registro de Productos",
-      description: "Gestionar el registro de productos y controles de calidad",
-      href: "/records",
-      checkPermission: PERMISSIONS.CONTENT?.READ,
-      permissions: [
-        {
-          permission: PERMISSIONS.CONTENT?.CREATE,
-          label: "Crear",
-          color: "bg-green-100 text-green-800",
-        },
-        {
-          permission: PERMISSIONS.CONTENT?.UPDATE,
-          label: "Editar",
-          color: "bg-yellow-100 text-yellow-800",
-        },
-        {
-          permission: PERMISSIONS.CONTENT?.PUBLISH,
-          label: "Aprobar",
-          color: "bg-purple-100 text-purple-800",
-        },
-      ],
-      buttonColor: "bg-blue-600 hover:bg-blue-700",
-    },
-    {
-      id: "users",
-      title: "Gestión de Usuarios",
-      description: "Administrar usuarios y permisos del sistema",
-      href: "/users",
-      checkPermission: PERMISSIONS.USERS?.READ,
-      permissions: [
-        {
-          permission: PERMISSIONS.USERS?.CREATE,
-          label: "Crear",
-          color: "bg-green-100 text-green-800",
-        },
-        {
-          permission: PERMISSIONS.USERS?.UPDATE,
-          label: "Editar",
-          color: "bg-yellow-100 text-yellow-800",
-        },
-        {
-          permission: PERMISSIONS.USERS?.DELETE,
-          label: "Eliminar",
-          color: "bg-red-100 text-red-800",
-        },
-      ],
-      buttonColor: "bg-green-600 hover:bg-green-700",
-    },
-    {
-      id: "products",
-      title: "Gestión de Productos",
-      description: "Administrar catálogo de productos y parámetros",
-      href: "/products",
-      checkPermission: PERMISSIONS.CONTENT?.READ,
-      permissions: [
-        {
-          permission: PERMISSIONS.CONTENT?.CREATE,
-          label: "Crear",
-          color: "bg-green-100 text-green-800",
-        },
-        {
-          permission: PERMISSIONS.CONTENT?.UPDATE,
-          label: "Editar",
-          color: "bg-yellow-100 text-yellow-800",
-        },
-      ],
-      buttonColor: "bg-indigo-600 hover:bg-indigo-700",
-    },
-    {
-      id: "reports",
-      title: "Reportes",
-      description: "Ver reportes y estadísticas del sistema",
-      href: "/reports",
-      checkPermission: PERMISSIONS.ANALYTICS?.READ,
-      permissions: [
-        {
-          permission: PERMISSIONS.ANALYTICS?.READ,
-          label: "Ver",
-          color: "bg-blue-100 text-blue-800",
-        },
-        {
-          permission: PERMISSIONS.REPORTS?.EXPORT,
-          label: "Exportar",
-          color: "bg-green-100 text-green-800",
-        },
-      ],
-      buttonColor: "bg-purple-600 hover:bg-purple-700",
-    },
-  ];
-
   return (
     <div className="space-y-8 px-4 sm:px-6 lg:px-8">
       {/* Header */}
@@ -182,47 +36,6 @@ export default async function Dashboard() {
       <DashboardStats />
 
       <UserInfo />
-
-      {/* Módulos del sistema basados en permisos */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">
-          Módulos del Sistema
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {modules.map(
-            (module) =>
-              hasPermission(session, module.checkPermission) && (
-                <ModuleCard
-                  key={module.id}
-                  title={module.title}
-                  description={module.description}
-                  permissions={module.permissions}
-                  buttonColor={module.buttonColor}
-                  session={session}
-                  href={module.href}
-                />
-              )
-          )}
-
-          {/* Configuración del Sistema - Solo para administradores */}
-          {hasPermission(session, PERMISSIONS.SYSTEM?.SETTINGS) && (
-            <ModuleCard
-              title="Configuración del Sistema"
-              description="Configuración avanzada y administración del sistema"
-              permissions={[
-                {
-                  permission: PERMISSIONS.SYSTEM?.SETTINGS,
-                  label: "Administrador",
-                  color: "bg-red-100 text-red-800",
-                },
-              ]}
-              buttonColor="bg-red-600 hover:bg-red-700"
-              session={session}
-              href="/admin"
-            />
-          )}
-        </div>
-      </div>
 
       {/* Mensaje si no tiene permisos */}
       {!session.user.permissions?.length && (

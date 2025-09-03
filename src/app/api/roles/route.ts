@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { hasPermission, isAdmin, PERMISSIONS } from '@/lib/permissions'
 
 // GET /api/roles - Obtener todos los roles
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -13,7 +13,43 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Obtener parámetros de búsqueda
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get('search')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = parseInt(searchParams.get('offset') || '0')
+
+    // Construir condiciones de búsqueda
+    const whereConditions: {
+      OR?: Array<{
+        name?: { contains: string };
+        displayName?: { contains: string };
+        description?: { contains: string };
+      }>;
+    } = {}
+    
+    if (search && search.trim().length > 0) {
+      whereConditions.OR = [
+        {
+          name: {
+            contains: search
+          }
+        },
+        {
+          displayName: {
+            contains: search
+          }
+        },
+        {
+          description: {
+            contains: search
+          }
+        }
+      ]
+    }
+
     const roles = await prisma.role.findMany({
+      where: whereConditions,
       include: {
         rolePermissions: {
           include: {
@@ -28,7 +64,9 @@ export async function GET() {
       },
       orderBy: {
         level: 'desc'
-      }
+      },
+      take: limit,
+      skip: offset
     })
 
     const formattedRoles = roles.map(role => ({

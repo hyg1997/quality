@@ -16,6 +16,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useModal, useConfirmModal } from "@/hooks/useModal";
 import { useForm } from "@/hooks/useForm";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useDataTableSearch } from "@/hooks/useDataTableSearch";
 import { productService, type Product } from "@/services/api/products";
 import { parameterService, type Parameter } from "@/services/api/parameters";
 import {
@@ -47,34 +48,32 @@ export default function ProductsManagement() {
   const { data: session, status } = useSession();
   const { hasPermission } = usePermissions();
   const { success, error } = useNotifications();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const createModal = useModal<Product>();
   const editModal = useModal<Product>();
   const confirmModal = useConfirmModal();
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    try {
+  // Hook para manejar búsqueda de productos
+  const {
+    data: products,
+    loading,
+    searchProps,
+    refetch: refetchProducts,
+  } = useDataTableSearch<Product>({
+    fetchData: async (searchTerm?: string) => {
       const response = await productService.getProducts({
         limit: 100,
+        search: searchTerm,
       });
-      if (response.success && response.data) {
-        setProducts(response.data.products);
-      }
-    } catch (error) {
-      console.error("Error fetching products:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
-  useEffect(() => {
-    if (session && hasPermission("content:read")) {
-      fetchProducts();
-    }
-  }, [session, hasPermission, fetchProducts]);
+      if (!response.success || !response.data) {
+        throw new Error("Error fetching products");
+      }
+
+      return response.data.products;
+    },
+    placeholder: "Buscar productos por nombre, código o descripción...",
+  });
 
   const handleCreateProduct = useCallback(
     async (data: ProductFormData) => {
@@ -88,7 +87,7 @@ export default function ProductsManagement() {
 
         if (response.success && response.data) {
           createModal.close();
-          await fetchProducts();
+          await refetchProducts();
           success(
             "Producto creado",
             `El producto ${data.name} ha sido creado exitosamente`
@@ -103,7 +102,7 @@ export default function ProductsManagement() {
         error("Error al crear producto", "Ha ocurrido un error inesperado");
       }
     },
-    [createModal, fetchProducts, success, error]
+    [createModal, refetchProducts, success, error]
   );
 
   const handleEditProduct = useCallback(
@@ -120,7 +119,7 @@ export default function ProductsManagement() {
 
         if (response.success && response.data) {
           editModal.close();
-          await fetchProducts();
+          await refetchProducts();
           success(
             "Producto actualizado",
             `El producto ${data.name} ha sido actualizado exitosamente`
@@ -138,7 +137,7 @@ export default function ProductsManagement() {
         );
       }
     },
-    [editModal, fetchProducts, success, error]
+    [editModal, refetchProducts, success, error]
   );
 
   const handleDeleteProduct = useCallback(
@@ -147,7 +146,7 @@ export default function ProductsManagement() {
         const response = await productService.deleteProduct(product.id);
 
         if (response.success) {
-          await fetchProducts();
+          await refetchProducts();
           success(
             "Producto eliminado",
             `El producto ${product.name} ha sido eliminado exitosamente`
@@ -162,7 +161,7 @@ export default function ProductsManagement() {
         error("Error al eliminar producto", "Ha ocurrido un error inesperado");
       }
     },
-    [fetchProducts, success, error]
+    [refetchProducts, success, error]
   );
 
   const handleToggleStatus = useCallback(
@@ -174,7 +173,7 @@ export default function ProductsManagement() {
         );
 
         if (response.success && response.data) {
-          await fetchProducts();
+          await refetchProducts();
           const statusText = !product.active ? "activado" : "desactivado";
           success(
             "Estado actualizado",
@@ -190,7 +189,7 @@ export default function ProductsManagement() {
         error("Error al cambiar estado", "Ha ocurrido un error inesperado");
       }
     },
-    [fetchProducts, success, error]
+    [refetchProducts, success, error]
   );
 
   // Memoize columns definition to prevent recreation on every render
@@ -286,7 +285,7 @@ export default function ProductsManagement() {
     ]
   );
 
-  if (status === "loading" || loading) {
+  if (status === "loading") {
     return (
       <PageLayout title="Administra el catálogo de productos del sistema">
         <div className="animate-pulse space-y-4">
@@ -335,6 +334,7 @@ export default function ProductsManagement() {
           actions={actions}
           loading={loading}
           emptyMessage="No hay productos registrados"
+          search={searchProps}
         />
       </PageLayout>
 

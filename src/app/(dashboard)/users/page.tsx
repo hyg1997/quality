@@ -16,6 +16,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useModal, useConfirmModal } from "@/hooks/useModal";
 import { useForm } from "@/hooks/useForm";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useDataTableSearch } from "@/hooks/useDataTableSearch";
 import {
   userService,
   roleService,
@@ -36,22 +37,34 @@ export default function UsersManagement() {
   const { hasPermission, isAdmin } = usePermissions();
   const { success, error } = useNotifications();
 
-  const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<UserRole[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const createModal = useModal<User>();
   const editModal = useModal<User>();
   const confirmModal = useConfirmModal();
 
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    const response = await userService.getUsers();
-    if (response.success && response.data) {
-      setUsers(response.data);
-    }
-    setLoading(false);
-  }, []);
+  // Hook para manejar búsqueda de usuarios
+  const {
+    data: users,
+    loading,
+    searchProps,
+    refetch: refetchUsers,
+  } = useDataTableSearch<User>({
+    fetchData: async (searchTerm?: string) => {
+      const url = new URL("/api/users", window.location.origin);
+      if (searchTerm) {
+        url.searchParams.set("search", searchTerm);
+      }
+
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        throw new Error("Error fetching users");
+      }
+
+      return response.json();
+    },
+    placeholder: "Buscar usuarios por nombre, email o username...",
+  });
 
   const fetchRoles = useCallback(async () => {
     const response = await roleService.getRoles();
@@ -144,10 +157,9 @@ export default function UsersManagement() {
 
   useEffect(() => {
     if (session && hasPermission("users:read")) {
-      fetchUsers();
       fetchRoles();
     }
-  }, [session, hasPermission, fetchUsers, fetchRoles]);
+  }, [session, hasPermission, fetchRoles]);
 
   const handleDeleteUser = useCallback(
     async (user: User) => {
@@ -173,7 +185,7 @@ export default function UsersManagement() {
           try {
             const response = await userService.deleteUser(user.id);
             if (response.success) {
-              await fetchUsers();
+              await refetchUsers();
               success(
                 "Usuario eliminado",
                 `El usuario ${userService.formatUserDisplayName(
@@ -195,7 +207,7 @@ export default function UsersManagement() {
         },
       });
     },
-    [confirmModal, fetchUsers, success, error]
+    [confirmModal, refetchUsers, success, error]
   );
 
   const handleDisable2FA = useCallback(
@@ -211,7 +223,7 @@ export default function UsersManagement() {
           try {
             const response = await userService.disable2FA(user.id);
             if (response.success) {
-              await fetchUsers();
+              await refetchUsers();
               success(
                 "2FA deshabilitado",
                 `La autenticación de dos factores ha sido deshabilitada para ${userService.formatUserDisplayName(
@@ -234,7 +246,7 @@ export default function UsersManagement() {
         },
       });
     },
-    [confirmModal, fetchUsers, success, error]
+    [confirmModal, refetchUsers, success, error]
   );
 
   const handleCreateUser = async (formData: UserFormData) => {
@@ -249,7 +261,7 @@ export default function UsersManagement() {
 
       if (response.success) {
         createModal.close();
-        await fetchUsers();
+        await refetchUsers();
         success(
           "Usuario creado",
           `El usuario ${formData.fullName} ha sido creado exitosamente`
@@ -277,7 +289,7 @@ export default function UsersManagement() {
 
       if (response.success) {
         editModal.close();
-        await fetchUsers();
+        await refetchUsers();
         success(
           "Usuario actualizado",
           `El usuario ${formData.fullName} ha sido actualizado exitosamente`
@@ -326,7 +338,7 @@ export default function UsersManagement() {
     [editModal, handleDisable2FA, handleDeleteUser, hasPermission, isAdmin]
   );
 
-  if (status === "loading" || loading) {
+  if (status === "loading") {
     return (
       <PageLayout title="Administra usuarios del sistema">
         <div className="animate-pulse space-y-4">
@@ -375,6 +387,7 @@ export default function UsersManagement() {
           actions={actions}
           loading={loading}
           emptyMessage="No hay usuarios registrados"
+          search={searchProps}
         />
       </PageLayout>
 
