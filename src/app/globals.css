@@ -33,3 +33,7 @@ textarea,
 ::file-selector-button {
   color: initial;
 }
+
+td {
+  color: initial;
+}

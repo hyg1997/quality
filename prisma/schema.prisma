@@ -28,7 +28,6 @@ model User {
   lastLoginIp       String?    @map("last_login_ip")
   
   createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
   
   sessions          UserSession[]
   refreshTokens     RefreshToken[]
@@ -50,7 +49,6 @@ model Role {
   isSystem    Boolean  @default(false) @map("is_system")
   
   createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
   
   userRoles     UserRole[]
   rolePermissions RolePermission[]
@@ -124,7 +122,6 @@ model UserSession {
   @@map("user_sessions")
 }
 
-
 model RefreshToken {
   id        String    @id @default(cuid())
   userId    String    @map("user_id")
@@ -138,11 +135,6 @@ model RefreshToken {
   
   @@map("refresh_tokens")
 }
-
-
-
-
-
 
 model AuditLog {
   id          String   @id @default(cuid())
@@ -166,10 +158,6 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-
-
-
-
 model Product {
   id          String   @id @default(cuid())
   name        String
@@ -177,8 +165,6 @@ model Product {
   code        String?  @unique
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
   
   parameters  Parameter[]
   records     Record[]
@@ -199,8 +185,6 @@ model Parameter {
   required          Boolean @default(true)
   active            Boolean @default(true)
   createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
   
   product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   masterParameter   MasterParameter? @relation(fields: [masterParameterId], references: [id], onDelete: SetNull)
@@ -215,14 +199,8 @@ model MasterParameter {
   name         String   @unique
   description  String?
   type         String   
-  defaultValue String?
-  minRange     Float?
-  maxRange     Float?
-  unit         String?
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
   
   parameters   Parameter[]
 
@@ -243,8 +221,6 @@ model Record {
   approvedBy      String?
   approvalDate    DateTime?
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
   
   product         Product @relation(fields: [productId], references: [id])
   user            User    @relation(fields: [userId], references: [id])
@@ -268,7 +244,6 @@ model Control {
   outOfRange    Boolean  @default(false)
   alertMessage  String?
   createdAt     DateTime @default(now())
-
   
   record        Record     @relation(fields: [recordId], references: [id], onDelete: Cascade)
   parameter     Parameter? @relation(fields: [parameterId], references: [id])
@@ -282,7 +257,6 @@ model Photo {
   filename    String
   base64Data  String
   createdAt   DateTime @default(now())
-
   
   record      Record @relation(fields: [recordId], references: [id], onDelete: Cascade)
 
@@ -297,7 +271,6 @@ model PasswordReset {
   createdAt DateTime  @default(now()) @map("created_at")
   expiresAt DateTime  @map("expires_at")
   usedAt    DateTime? @map("used_at")
-  
   
   ipAddress String?   @map("ip_address")
   userAgent String?   @map("user_agent")
