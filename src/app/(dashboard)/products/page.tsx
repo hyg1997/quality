@@ -312,14 +312,14 @@ export default function ProductsManagement() {
           search={searchProps}
         />
       </PageLayout>
-      {}
+
       <ProductFormModal
         isOpen={createModal.isOpen}
         onClose={createModal.close}
         onSubmit={handleCreateProduct}
         title="Crear Producto"
       />
-      {}
+
       <ProductFormModal
         isOpen={editModal.isOpen}
         onClose={editModal.close}
@@ -327,7 +327,7 @@ export default function ProductsManagement() {
         product={editModal.data}
         title="Editar Producto"
       />
-      {}
+
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
@@ -427,6 +427,7 @@ function ProductFormModal({
   }, [isOpen, product?.id, parameters, loadAvailableParameters]);
   const addParameter = () => {
     const newParameter: ParameterFormData = {
+      id: "new",
       name: "",
       type: "range",
       expectedValue: "",
@@ -460,6 +461,10 @@ function ProductFormModal({
         type: selectedParam.type,
         required: true,
         active: selectedParam.active,
+        minRange: 0,
+        maxRange: 100,
+        expectedValue: "",
+        unit: "",
       };
       setParameters(updatedParameters);
       loadAvailableParameters();
@@ -469,6 +474,7 @@ function ProductFormModal({
     if (!product?.id) return;
     try {
       for (const param of parameters) {
+        if (param.id === "new") continue;
         if (param.id) {
           await parameterService.updateParameter(param.id, {
             name: param.name,
@@ -526,10 +532,10 @@ function ProductFormModal({
     }
   };
   const handleSubmit = async (data: ProductFormData) => {
-    await onSubmit(data);
     if (product?.id) {
       await saveParameters();
     }
+    await onSubmit(data);
   };
   return (
     <FormModal
@@ -542,7 +548,6 @@ function ProductFormModal({
       size="xl"
     >
       <div className="space-y-6">
-        {}
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
             <button
@@ -571,7 +576,7 @@ function ProductFormModal({
             )}
           </nav>
         </div>
-        {}
+
         {activeTab === "product" && (
           <div className="space-y-4">
             <div>
@@ -635,7 +640,7 @@ function ProductFormModal({
             </div>
           </div>
         )}
-        {}
+
         {activeTab === "parameters" && product?.id && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -663,7 +668,7 @@ function ProductFormModal({
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Parámetro
                         </label>
-                        {param.id ? (
+                        {param.id !== "new" ? (
                           <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700">
                             {param.name}
                           </div>

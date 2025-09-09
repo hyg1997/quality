@@ -316,14 +316,14 @@ export default function MasterParametersManagement() {
           search={searchProps}
         />
       </PageLayout>
-      {}
+
       <MasterParameterFormModal
         isOpen={createModal.isOpen}
         onClose={createModal.close}
         onSubmit={handleCreateMasterParameter}
         title="Crear Parámetro Maestro"
       />
-      {}
+
       <MasterParameterFormModal
         isOpen={editModal.isOpen}
         onClose={editModal.close}

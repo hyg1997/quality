@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
     }
     const {
       productId,
+      masterParameterId,
       name,
       type,
       expectedValue,
@@ -92,10 +93,10 @@ export async function POST(request: NextRequest) {
       required = true,
       active = true,
     } = await request.json();
-    if (!productId || !name || !type) {
+    if (!productId || !masterParameterId || !name || !type) {
       return NextResponse.json(
         {
-          error: "Product ID, name, and type are required",
+          error: "Product ID, master parameter ID, name, and type are required",
         },
         { status: 400 }
       );
@@ -136,6 +137,7 @@ export async function POST(request: NextRequest) {
     const parameter = await prisma.parameter.create({
       data: {
         productId,
+        masterParameterId,
         name: name.trim(),
         type,
         expectedValue: expectedValue?.trim(),
@@ -151,6 +153,14 @@ export async function POST(request: NextRequest) {
             id: true,
             name: true,
             code: true,
+          },
+        },
+        masterParameter: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            active: true,
           },
         },
       },

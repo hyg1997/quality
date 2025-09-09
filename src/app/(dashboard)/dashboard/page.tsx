@@ -20,7 +20,6 @@ export default async function Dashboard() {
   }
   return (
     <div className="space-y-8 px-4 sm:px-6 lg:px-8">
-      {}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Dashboard Principal
@@ -31,7 +30,7 @@ export default async function Dashboard() {
       </div>
       <DashboardStats />
       <UserInfo />
-      {}
+
       {!session.user.permissions?.length && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
           <div className="flex">
